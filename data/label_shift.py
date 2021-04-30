@@ -17,6 +17,8 @@ def label_shift(X,y,delta,class_label):
     X_2=[]
     x_target=[]
     y_target=[]
+    #### initialise the random number generator? Necessary?
+    random.seed(69105)
     for i in range(N):
         if(y[i][class_label]==1):
             idx.append(i)
