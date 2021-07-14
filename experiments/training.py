@@ -171,7 +171,7 @@ def train_model(model="SVHN" ,batch_size=128 ,total_epochs=25 ,iterations=1 ,x_t
         elif model=="2MNIST-M":
             M=init_MNIST_model()
         elif model=="binary":
-            init_MNIST_model_binary()
+            M=init_MNIST_model_binary()
         # Save the weights using the `checkpoint_path` format
         M.save_weights(checkpoint_path.format(epoch=0))
         ## choose loss function, optimiser etc. and train

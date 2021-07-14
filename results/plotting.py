@@ -160,3 +160,24 @@ def plot_results_data(sizes=[],model="SVHN",result=[],save=True):# plot for the 
     ax.set_ylabel('Loss')
     if(save):
         f.savefig("./images/data/"+prefix[3]+dt_string+".pdf")
+def plot_result_file(epsilon,alpha,sigma,TASK,Binary=False):
+    import pandas as pd
+    sigma_tmp=sigma
+    sigma=sigma[0]*10**(-1*sigma[1])  
+    if Binary:
+        result_path="results/"+"task"+str(TASK)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"+str(sigma_tmp[0])+str(sigma_tmp[1])
+        plt.title("Binary: "+r"$\alpha$="+str(alpha)+r" $\epsilon$="+str(epsilon)+r" $\sigma$="+str(sigma))
+    else:
+        result_path="results/"+"task"+str(TASK)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"+str(sigma_tmp[0])+str(sigma_tmp[1])
+        plt.title(r"$\alpha$="+str(alpha)+r" $\epsilon$="+str(epsilon)+r" $\sigma$="+str(sigma))
+    results=pd.read_pickle(result_path+"_results.pkl")
+    print(results.head())
+    ### do the plots
+    plt.plot(results["Weightupdates"],results["Bound"],'r*-')
+    plt.plot(results["Weightupdates"],results["Trainerror"],'m^-')
+    
+    plt.xlabel("Weight updates")
+    plt.ylabel("Error")
+    
+    plt.legend(["Bound","Empirical error"])
+    plt.show()
