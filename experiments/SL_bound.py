@@ -29,10 +29,8 @@ def train_prior_and_posterior(alpha,x_train,y_train,x_test,y_test,b=256,sigma=1e
 import numpy as np
 import os
 import tensorflow as tf
-from importlib.machinery import SourceFileLoader
-path_to_root_file="/home/adam/Code/"
-module5 = SourceFileLoader('train', path_to_root_file+'mnist_transfer/experiments/training.py').load_module()
-from train import *
+
+from experiments.training import *
 
 ## custom callback to terminate training at some specific value of a metric
 class stop_callback(tf.keras.callbacks.Callback):

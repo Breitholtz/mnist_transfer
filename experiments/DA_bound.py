@@ -1,9 +1,6 @@
-from importlib.machinery import SourceFileLoader
-path_to_root_file="/home/adam/Code/"
-mymodule = SourceFileLoader('train', path_to_root_file+'mnist_transfer/experiments/training.py').load_module()
-mymodule2 = SourceFileLoader('kl', path_to_root_file+'mnist_transfer/util/kl.py').load_module()
-from train import *
-from kl import *
+from experiments.training import *
+from util.kl import *
+
 def joint_error(newlist,newlist2,true_label):
     ## expected joint error
         shapes=newlist.shape

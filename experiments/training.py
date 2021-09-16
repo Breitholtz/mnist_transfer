@@ -1,10 +1,11 @@
-import keras
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
-from keras.constraints import max_norm
-from keras.regularizers import L2
 import tensorflow as tf
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Flatten
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
+from tensorflow.keras.constraints import max_norm
+from tensorflow.keras.regularizers import l2
+
 import os
 ## implement LeNet-5 architecture
 def init_model():
