@@ -24,9 +24,13 @@ from util.kl import *
 from util.misc import *
 from results.plotting import *
 
-def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, 
+def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
                   prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3]):
 
+    print('\n'+'-'*40)
+    print('Computing bound components for')
+    print('   Prior: %s' % prior_path)
+    print('   Posterior: %s' % posterior_path)
     print('Clearing session...')
     K.clear_session()
     
@@ -129,6 +133,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     #### Here we just do the four pairs so there is no cross-usage
     #### this can be not good for the independence of the values which makes the CI useless
 
+    print('Computing joint errors and disagreements...')
     for i, h in enumerate(w_s_draws):
         M_posterior.set_weights(h)
         d_tx_h=M_posterior.predict(x_target,verbose=0)
@@ -189,38 +194,40 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     else: 
         updates = (int(checkpoint[2:])+1)*547 # @TODO: Constant hack
        
-    if Binary:
-        result_path="results/"+"task"+str(TASK)+"/Binary/"+str(int(1000*epsilon))+\
-            "_"+str(int(100*alpha))+"_"+str(sigma_tmp[0])+str(sigma_tmp[1])+'_'+checkpoint
+    if binary:
+        result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+\
+            "_"+str(int(100*alpha))+"_"+str(sigma_tmp[0])+str(sigma_tmp[1])+'_'+checkpoint+'_results.pkl'
     else:
-        result_path="results/"+"task"+str(TASK)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
-        "_"+str(sigma_tmp[0])+str(sigma_tmp[1])+'_'+checkpoint
+        result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
+        "_"+str(sigma_tmp[0])+str(sigma_tmp[1])+'_'+checkpoint+'_results.pkl'
         
     # Create dir
-    os.makedirs(result_path, exist_ok=True)
+    os.makedirs(os.path.dirname(result_path), exist_ok=True)
         
     results=pd.DataFrame({
-        'Weightupdates': updates,
-        'train_germain': train_germain,
-        'target_germain': target_germain,
-        'KL': KL,
-        'e_s': e_s,
-        'e_t': e_t,
-        'd_tx': d_tx, 
-        'd_sx': d_sx,
-        'error_std': error_std,
-        'target_error_std': target_error_std,
-        'e_s_std': e_s_std,
-        'e_t_std': e_t_std,
-        'd_tx_std': d_tx_std,
-        'd_sx_std': d_sx_std
+        'Weightupdates': [updates],
+        'train_germain': [train_germain],
+        'target_germain': [target_germain],
+        'KL': [KL],
+        'e_s': [e_s],
+        'e_t': [e_t],
+        'd_tx': [d_tx], 
+        'd_sx': [d_sx],
+        'error_std': [error_std],
+        'target_error_std': [target_error_std],
+        'e_s_std': [e_s_std],
+        'e_t_std': [e_t_std],
+        'd_tx_std': [d_tx_std],
+        'd_sx_std': [d_sx_std]
     })
    
-    print('Saving results...')
+    print('Saving results in %s ...' % result_path)
     results.to_pickle(result_path)
     print('Done.')
+    print('\n-'*40 + '\n')
     
-    
+    return results 
+
     """
     The reimaining part only makes sense in the context of a set of snapshots
     
@@ -261,3 +268,4 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         pickle.dump(results,f)
     f.close()
     return results
+    """
