@@ -231,6 +231,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         'delta': [delta], 
         'm_bound': [len(y_bound)],
         'm_target': [len(y_target)],
+        'n_estimators': [n_estimators],
         'seed': [seed]
     })
    
@@ -291,12 +292,15 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
     tmp= sys.maxsize
     res=[]
     bestparam=[0,0]
+    i = 0
+    delta_p = delta/(len(avec)*len(omegas))
     for a in avec:
         for omega in omegas:
+            i += 1
             if beta_bound:
-                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta,a,omega,m,L)
+                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,L)
             else:
-                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,a,omega,m,L)
+                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m,L)
             if min(germain_bound)<tmp:
                 tmp=min(germain_bound)
                 #print("Best bound thus far:"+str(tmp))
@@ -312,19 +316,22 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
         omegas=np.arange(bestparam[1]-bestparam[1]/2,bestparam[1]+bestparam[1]*4,0.1*bestparam[1])
     else:## no bound better than the max int was found
         avec=np.arange(-1,1,0.1)
-    boundparts=[0, 0,0,0,0]
+    boundparts=[0,0,0,0,0]
+    delta_p = delta/(len(avec)*len(omegas) + i)
     for a in avec:
         for omega in omegas:
+            i += 1
             if beta_bound:
-                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta,a,omega,m,L)
+                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,L)
             else:
-                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,a,omega,m,L)
+                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m,L)
                 boundparts=[a1,a2,a3,a4,a5]
                 
             if min(germain_bound)<tmp:
                 tmp=min(germain_bound)
                 #print("Best finer bound thus far:"+str(tmp))
                 res=germain_bound
+                bestparts = boundparts
                 bestparam=[a,omega]
                 
     return res, bestparam, boundparts
@@ -333,7 +340,7 @@ def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,L,BETA=0):
     BETA=10.986111 ### hardcoded value for beta_infinity for TASK2 TODO!
     m_s=m  ## temporary, we should pass these in
     m_t=m  ## temporary, we should pass these in
-    bprime=b/(1-np.exp(-b))
+    bprime=BETA*b/(1-np.exp(-b))
     cprime=c/(1-np.exp(-c))
     
     bound=[]
@@ -343,7 +350,7 @@ def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,L,BETA=0):
     for i in range(L):
         a1[i]=cprime/2*(d_tx[i])
         a2[i]=bprime*e_s[i]
-        a3[i]=(cprime/(m_t*c)+bprime*BETA/(m_s*b))*(2*KL[i]+np.log(2/delta))
+        a3[i]=(cprime/(m_t*c)+bprime/(m_s*b))*(2*KL[i]+np.log(2/delta))
     ## we cannot evaluate the eta term in the bound so this is it. For TASK 2 it is 0 anyway.
     ## And for other tasks we will not evaluate this bound anyway as we probably have no way of doing so easily..
         bound.append(a1[i]+a2[i]+a3[i])
