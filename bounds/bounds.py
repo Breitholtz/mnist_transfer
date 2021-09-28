@@ -25,7 +25,7 @@ from util.misc import *
 from results.plotting import *
 
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
-                  prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3]):
+                  prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None):
 
     print('\n'+'-'*40)
     print('Computing bound components for')
@@ -149,10 +149,11 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         d_tx_hprime=make_01(d_tx_hprime)
 
         e_ssum.append(joint_error(d_sx_h,d_sx_hprime,y_bound))
-        d_sxsum=(classifier_disagreement(d_sx_h,d_sx_hprime))
-        e_tsum=(joint_error(d_tx_h,d_tx_hprime,y_target))
-        d_txsum=(classifier_disagreement(d_tx_h,d_tx_hprime))
+        d_sxsum.append(classifier_disagreement(d_sx_h,d_sx_hprime))
+        e_tsum.append(joint_error(d_tx_h,d_tx_hprime,y_target))
+        d_txsum.append(classifier_disagreement(d_tx_h,d_tx_hprime))
 
+        
     # Means
     e_s = np.mean(e_ssum)
     d_sx = np.mean(d_sxsum)
@@ -218,13 +219,18 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         'e_s_std': [e_s_std],
         'e_t_std': [e_t_std],
         'd_tx_std': [d_tx_std],
-        'd_sx_std': [d_sx_std]
+        'd_sx_std': [d_sx_std], 
+        'alpha': [alpha], 
+        'sigma': [sigma], 
+        'epsilon': [epsilon],
+        'checkpoint': [checkpoint], 
+        'seed': [seed]
     })
    
     print('Saving results in %s ...' % result_path)
     results.to_pickle(result_path)
     print('Done.')
-    print('\n-'*40 + '\n')
+    print('-'*40 + '\n')
     
     return results 
 
