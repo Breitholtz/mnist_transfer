@@ -44,8 +44,6 @@ if __name__ == '__main__':
     bound = args.bound
     prior_path = args.prior_path
     posterior_path = args.posterior_path
-    
-
 
     if prior_path == '': 
         prior_path = None
@@ -66,7 +64,7 @@ if __name__ == '__main__':
         x_bound=x_source
         y_bound=y_source_bin
     else:
-        x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha)
+        x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha, random_state=seed)
         
     compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, 
                         prior_path=prior_path, bound=bound, binary=binary, sigma=sigma, 
