@@ -4,4 +4,10 @@
 
 * [batch_inspect_bounds.ipynb](batch_inspect_bounds.ipynb) computes the bounds and plots the results.
 
+# Tasks
 
+* The file [data/tasks.py](data/tasks.py) contains functions related to learning tasks including loading and preprocessing of data for experiments. 
+
+# Bounds
+
+* The file [bounds/bounds.py](bounds/bounds.py) has a function ```compute_bound_parts``` which computes the different terms which go into the Germain bounds. 
