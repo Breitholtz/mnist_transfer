@@ -10,4 +10,4 @@
 
 # Bounds
 
-* The file [bounds/bounds.py](bounds/bounds.py) has a function ```compute_bound_parts``` which computes the different terms which go into the Germain bounds. 
+* The file [bounds/bounds.py](bounds/bounds.py) has a function ```compute_bound_parts``` which computes the different terms which go into the Germain bounds for a pair of prior/posterior snapshots given as paths to .pkl files. 
