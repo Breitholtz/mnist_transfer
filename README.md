@@ -11,3 +11,7 @@
 # Bounds
 
 * The file [bounds/bounds.py](bounds/bounds.py) has a function ```compute_bound_parts``` which computes the different terms which go into the Germain bounds for a pair of prior/posterior snapshots given as paths to .pkl files. 
+
+* The file [batch_bound_single.py](batch_bound_single.py) implements the evaluation of a single snapshot through command line arguments. Calls ```compute_bound_parts```.
+
+* The file [batch_bound_single.sbatch](batch_bound_single.sbatch) contains a Slurm script for queueing to the server, mirroring the arguments of ```batch_bound_single```. NOTE: The parameter sigma is supplied as a two-part string e.g., "3.3", not with a comma. 
