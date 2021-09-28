@@ -58,16 +58,17 @@ if __name__ == '__main__':
     x_source, y_source, x_target, y_target = load_task(task)
     
     print('Making data binary...')
-    y_target_bin = make_mnist_binary(y_target)
-    y_source_bin = make_mnist_binary(y_source)
-    
+    if binary: 
+        y_target = make_mnist_binary(y_target)
+        y_source = make_mnist_binary(y_source)
+
     if alpha==0:
         x_bound=x_source
         y_bound=y_source_bin
     else:
-        x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source_bin, test_size=alpha)
+        x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha)
         
-    compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target_bin, 
+    compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, 
                         prior_path=prior_path, bound=bound, binary=binary, sigma=sigma, 
                         epsilon=epsilon, n_classifiers=n_classifiers)
    
