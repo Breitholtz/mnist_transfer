@@ -31,11 +31,12 @@ if __name__ == '__main__':
     parser.add_argument('-P', '--posterior', type=str, default='', dest='posterior_path')
     
     args = parser.parse_args()
+    print(args.__dict__)
     
     seed = args.seed
     task = args.task
     alpha = args.alpha
-    s = args.sigma.split(',')
+    s = args.sigma.split('.')
     sigma = [int(s[0]), int(s[1])]
     epsilon = args.epsilon
     binary = args.binary>0
@@ -44,7 +45,7 @@ if __name__ == '__main__':
     prior_path = args.prior_path
     posterior_path = args.posterior_path
     
-    print(args.__dict__)
+
 
     if prior_path == '': 
         prior_path = None
