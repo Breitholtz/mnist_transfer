@@ -35,6 +35,10 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     K.clear_session()
     
     print('Initializing models...')
+    if not task == 2:
+        raise Exception('Model initialization for non-task-2 not implemented')
+        #@TODO: Write init_task_model(task)
+        
     if binary:
         M_prior = init_MNIST_model_binary()
         M_posterior = init_MNIST_model_binary()
@@ -58,7 +62,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         prior_path="priors/"+"task"+str(task)+"/"+str(int(100*alpha))+"/prior.ckpt"
         
     print('Loading weights...')
-    if alpha==0:
+    if alpha==0 or prior_path is None:
         ### do nothing, just take the random initialisation
         w_a=M_prior.get_weights()
     else:
@@ -224,6 +228,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         'sigma': [sigma], 
         'epsilon': [epsilon],
         'checkpoint': [checkpoint], 
+        'delta': [delta], 
+        'm_bound': [len(y_bound)],
+        'm_target': [len(y_target)],
         'seed': [seed]
     })
    
@@ -275,3 +282,70 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     f.close()
     return results
     """
+    
+def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
+    #### here we want to do a coarse grid search over a and omega to get the smallest bound 
+    print("Starting gridsearch....")
+    avec=[0.001,0.005,0.01,0.05,0.1,0.5,1,5,10,50,100,500,1000,5000,10000,50000,100000]
+    omegas=[0.001,0.005,0.01,0.05,0.1,0.5,1,5,10,50,100,500,1000,5000,10000,50000,100000]
+    tmp= sys.maxsize
+    res=[]
+    bestparam=[0,0]
+    for a in avec:
+        for omega in omegas:
+            if beta_bound:
+                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta,a,omega,m,L)
+            else:
+                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,a,omega,m,L)
+            if min(germain_bound)<tmp:
+                tmp=min(germain_bound)
+                #print("Best bound thus far:"+str(tmp))
+                res=germain_bound
+                bestparam=[a,omega]
+                
+    ### do a finer sweep around the best parameters
+    if bestparam[0]!=0:
+        avec=np.arange(bestparam[0]-bestparam[0]/2,bestparam[0]+bestparam[0]*4,0.1*bestparam[0])
+    else:## no bound better than the max int was found, if that is even possible
+        avec=np.arange(-1,1,0.1)
+    if bestparam[1]!=0:
+        omegas=np.arange(bestparam[1]-bestparam[1]/2,bestparam[1]+bestparam[1]*4,0.1*bestparam[1])
+    else:## no bound better than the max int was found
+        avec=np.arange(-1,1,0.1)
+    boundparts=[0, 0,0,0,0]
+    for a in avec:
+        for omega in omegas:
+            if beta_bound:
+                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta,a,omega,m,L)
+            else:
+                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,a,omega,m,L)
+                boundparts=[a1,a2,a3,a4,a5]
+                
+            if min(germain_bound)<tmp:
+                tmp=min(germain_bound)
+                #print("Best finer bound thus far:"+str(tmp))
+                res=germain_bound
+                bestparam=[a,omega]
+                
+    return res, bestparam, boundparts
+
+def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,L,BETA=0):
+    BETA=10.986111 ### hardcoded value for beta_infinity for TASK2 TODO!
+    m_s=m  ## temporary, we should pass these in
+    m_t=m  ## temporary, we should pass these in
+    bprime=b/(1-np.exp(-b))
+    cprime=c/(1-np.exp(-c))
+    
+    bound=[]
+    a1=np.zeros(L)
+    a2=np.zeros(L)
+    a3=np.zeros(L)
+    for i in range(L):
+        a1[i]=cprime/2*(d_tx[i])
+        a2[i]=bprime*e_s[i]
+        a3[i]=(cprime/(m_t*c)+bprime*BETA/(m_s*b))*(2*KL[i]+np.log(2/delta))
+    ## we cannot evaluate the eta term in the bound so this is it. For TASK 2 it is 0 anyway.
+    ## And for other tasks we will not evaluate this bound anyway as we probably have no way of doing so easily..
+        bound.append(a1[i]+a2[i]+a3[i])
+    boundparts=[a1,a2,a3]
+    return bound, boundparts
