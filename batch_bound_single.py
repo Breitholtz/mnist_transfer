@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     if alpha==0:
         x_bound=x_source
-        y_bound=y_source_bin
+        y_bound=y_source
     else:
         x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha, random_state=seed)
         
