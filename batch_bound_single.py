@@ -72,6 +72,7 @@ if __name__ == '__main__':
     results = compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, 
                         prior_path=prior_path, bound=bound, binary=binary, sigma=sigma, alpha=alpha,
                         delta=delta, epsilon=epsilon, n_classifiers=n_classifiers, seed=seed)
+    checkpoint = results['checkpoint'].values.ravel()[0]
     
     if binary:
         result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+\
