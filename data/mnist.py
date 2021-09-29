@@ -1,7 +1,7 @@
 def load_mnist():
-    import keras as keras 
-    from keras import backend as K
-    from keras.datasets import mnist
+    import tensorflow.keras as keras
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.datasets import mnist
     import numpy as np
     num_classes = 10
     ## import mnist
