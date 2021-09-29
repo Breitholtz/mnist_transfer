@@ -231,7 +231,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         'delta': [delta], 
         'm_bound': [len(y_bound)],
         'm_target': [len(y_target)],
-        'n_estimators': [n_estimators],
+        'n_classifiers': [n_classifiers],
         'seed': [seed]
     })
    
