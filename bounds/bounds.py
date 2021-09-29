@@ -27,7 +27,6 @@ from results.plotting import *
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
                   prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None):
 
-    print('\n'+'-'*40)
     print('Computing bound components for')
     print('   Prior: %s' % prior_path)
     print('   Posterior: %s' % posterior_path)
@@ -198,16 +197,6 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
             updates = int(checkpoint[2:])
     else: 
         updates = (int(checkpoint[2:])+1)*547 # @TODO: Constant hack
-       
-    if binary:
-        result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+\
-            "_"+str(int(100*alpha))+"_"+str(sigma_tmp[0])+str(sigma_tmp[1])+'_'+checkpoint+'_results.pkl'
-    else:
-        result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
-        "_"+str(sigma_tmp[0])+str(sigma_tmp[1])+'_'+checkpoint+'_results.pkl'
-        
-    # Create dir
-    os.makedirs(os.path.dirname(result_path), exist_ok=True)
         
     results=pd.DataFrame({
         'Weightupdates': [updates],
@@ -233,12 +222,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         'm_target': [len(y_target)],
         'n_classifiers': [n_classifiers],
         'seed': [seed]
-    })
-   
-    print('Saving results in %s ...' % result_path)
-    results.to_pickle(result_path)
-    print('Done.')
-    print('-'*40 + '\n')
+    })  
     
     return results 
 
