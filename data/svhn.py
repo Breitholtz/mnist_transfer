@@ -18,7 +18,7 @@ def load_svhn():
     X_test = X_test.astype('float32')
     X_extra = X_extra.astype('float32')
 
-    #### make validation set from train and extra (and make extra part of train(?))
+    #### make validation set from train and extra (and make extra part of train)
 
     X_train=np.append(X_train,X_extra, axis=0)
     Y_train=np.append(Y_train,Y_extra, axis=0)
