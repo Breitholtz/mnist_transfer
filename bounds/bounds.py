@@ -16,7 +16,7 @@ from tensorflow.python.keras.saving import saving_utils
 from data import mnist_m as mnistm
 from data import mnist
 from data.label_shift import label_shift_linear, plot_labeldist, plot_splitbars
-from data.tasks import load_task
+from data.tasks import *
 from experiments.training import *
 from experiments.SL_bound import *
 from experiments.DA_bound import *
@@ -34,17 +34,10 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     K.clear_session()
     
     print('Initializing models...')
-    if not task == 2:
-        raise Exception('Model initialization for non-task-2 not implemented')
-        #@TODO: Write init_task_model(task)
-        
-    if binary:
-        M_prior = init_MNIST_model_binary()
-        M_posterior = init_MNIST_model_binary()
-    else:
-        M_prior = init_MNIST_model()
-        M_posterior = init_MNIST_model()                
-
+    #if not task == 2:
+        #raise Exception('Model initialization for non-task-2 not implemented')
+       
+    init_task_model(task,binary) ### @TODO: Use and test the arch parameter everywhere
     # @TODO: Are the parameters for optimizer etc necessary when just loading the model?
     M_prior.compile(loss=tf.keras.losses.categorical_crossentropy,
                    optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
@@ -134,7 +127,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     t = time.time()
 
     #### Here we just do the four pairs so there is no cross-usage
-    #### this can be not good for the independence of the values which makes the CI useless
+    #### this to avoid compromising the independence of the values which makes the CI useless
 
     print('Computing joint errors and disagreements...')
     for i, h in enumerate(w_s_draws):

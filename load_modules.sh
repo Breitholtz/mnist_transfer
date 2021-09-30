@@ -1,4 +1,3 @@
-
 #!/usr/bin/bash
 
 ml GCC/8.3.0
