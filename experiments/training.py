@@ -7,6 +7,36 @@ from tensorflow.keras.constraints import max_norm
 from tensorflow.keras.regularizers import l2
 
 import os
+
+    
+def init_FC_model(binary=True):
+    ### same as Dziugaite, to compare with rivasplata et al. in their case
+    
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense
+    model = Sequential()
+    model.add(Dense(1024,input_shape=(32,32,3), activation = 'relu'))
+    #model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
+    model.add(Dense(600, activation = 'relu'))
+    #model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
+    model.add(Dense(600, activation = 'relu'))
+    model.add(Flatten())
+    if binary:
+        model.add(Dense(2, activation = 'softmax'))
+    else:
+        model.add(Dense(10, activation = 'softmax'))
+    return model
+def init_lr_model(flattened_size,binary=True):
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import InputLayer,Dense
+    model = Sequential()
+    model.add(Dense(flattened_size))#InputLayer(input_shape=(flattened_size)))
+    if binary:
+        model.add(Dense(2,activation="softmax"))
+    else:
+        model.add(Dense(10, activation='softmax'))
+    return model
+    
 ## implement LeNet-5 architecture
 def init_model():
     model = Sequential()
@@ -21,23 +51,23 @@ def init_model():
     model.add(Dense(10, activation='softmax')) # output layer
     return model
 ## implement LeNet-5-like architecture
-def init_SVHN_model():
-    '''
-We use stochastic gradient descent with
-momentum: 0.9
-weight_decay: 0.0005
------- this was not used on mnist<->svhn tests
-and the learning rate annealing described by the following formula:
-µp =µ0/(1 + α · p)^β,
-where p is the training progress linearly changing from 0
-to 1, µ0 = 0.01, α = 10 and β = 0.75 (the schedule
-was optimized to promote convergence and low error on
-the source domain).
-------
+def init_svhn_model(binary):
+   
+# We use stochastic gradient descent with
+# momentum: 0.9
+# weight_decay: 0.0005
+# ------ this was not used on mnist<->svhn tests
+# and the learning rate annealing described by the following formula:
+# µp =µ0/(1 + α · p)^β,
+# where p is the training progress linearly changing from 0
+# to 1, µ0 = 0.01, α = 10 and β = 0.75 (the schedule
+# was optimized to promote convergence and low error on
+# the source domain).
+# ------
 
-Following (Srivastava et al., 2014) we also use dropout and
-l_2-norm restriction when we train the SVHN architecture.
-    '''
+# Following (Srivastava et al., 2014) we also use dropout and
+# l_2-norm restriction when we train the SVHN architecture.
+   
     model = Sequential()
     model.add(Conv2D(64,(5,5),strides=(1,1), activation='relu',input_shape=(32,32,3),kernel_constraint=max_norm(4), bias_constraint=max_norm(4),kernel_regularizer=L2(0.0005), bias_regularizer=L2(0.0005))) ## 6 5x5 conv kernels
     model.add(Dropout(0.9))
@@ -53,12 +83,15 @@ l_2-norm restriction when we train the SVHN architecture.
     model.add(Dropout(0.5))
     model.add(Dense(2048, activation='relu',kernel_constraint=max_norm(4), bias_constraint=max_norm(4),kernel_regularizer=L2(0.0005), bias_regularizer=L2(0.0005)))
     model.add(Dropout(0.5))
-    model.add(Dense(10, activation='softmax',kernel_constraint=max_norm(4), bias_constraint=max_norm(4),kernel_regularizer=L2(0.0005), bias_regularizer=L2(0.0005))) # output layer
+    if binary:
+        model.add(Dense(10, activation='softmax',kernel_constraint=max_norm(4), bias_constraint=max_norm(4),kernel_regularizer=L2(0.0005), bias_regularizer=L2(0.0005))) # output layer
+    else:
+        model.add(Dense(10, activation='softmax',kernel_constraint=max_norm(4), bias_constraint=max_norm(4),kernel_regularizer=L2(0.0005), bias_regularizer=L2(0.0005))) # output layer
     
     return model
 
 ## implement LeNet-5-like architecture for mnist
-def init_MNIST_model():
+def init_mnist_model(binary):
     model = Sequential()
     model.add(Conv2D(32,(5,5),strides=(1,1), activation='relu',input_shape=(32,32,3))) ## 6 5x5 conv kernels
     model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
@@ -67,20 +100,51 @@ def init_MNIST_model():
     model.add(Flatten())
     model.add(Dense(100, activation='relu'))
     model.add(Dense(100, activation='relu'))
-    model.add(Dense(10, activation='softmax')) # output layer
-    return model
-def init_MNIST_model_binary():
-    model = Sequential()
-    model.add(Conv2D(32,(5,5),strides=(1,1), activation='relu',input_shape=(32,32,3))) ## 6 5x5 conv kernels
-    model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
-    model.add(Conv2D(48,(5,5),strides=(1,1), activation='relu')) ## 16 5x5 conv kernels
-    model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
-    model.add(Dense(100, activation='relu'))
-    model.add(Dense(2, activation='softmax')) # output layer
+    if binary:
+        model.add(Dense(2, activation='softmax')) # output layer
+    else:
+        model.add(Dense(10, activation='softmax')) # output layer
     return model
 
+def init_task_model(TASK=2,binary=True,arch="lenet"): 
+    ### we here take in the task number and architecture
+    ### We return the model which fits the task
+    if arch not in ["lr","lenet","fc","resnet"]:
+        raise Exception('Architecture '+arch+' not implemented/tested')
+    if TASK==1 or TASK==2 or TASK==3 or TASK==4:
+        #### MNIST label shift (1) and mix of MNIST and MNIST-M (2)
+        if arch=="lr":
+            model=init_lr_model(binary)
+        elif arch=="lenet":
+            model=init_mnist_model(binary)
+        elif arch=="fc":
+            model=init_fc_model(binary)
+        else:
+            model=init_resnet_model(binary)
+    elif TASK==5:
+        
+        #### MNIST -> SVHN
+        if arch=="lr":
+            model=init_lr_model(binary)
+        elif arch=="lenet":
+            model=init_mnist_model(binary)
+        elif arch=="fc":
+            model=init_fc_model(binary)
+        else:
+            model=init_resnet_model(binary)
+    elif TASK==6:
+        #### CheXpert -> chestxray14
+        if arch=="lr":
+            model=init_lr_model(binary)
+        elif arch=="lenet":
+            model=init_mnist_model(binary)
+        elif arch=="fc":
+            model=init_fc_model(binary)
+        else:
+            model=init_resnet_model(binary)
+    else:
+        raise Exception('Task '+str(TASK)+' not implemented/tested')
+    return model
 ## shamelessly taken from : https://stackoverflow.com/questions/47731935/using-multiple-validation-sets-with-keras
 
 ## Custom callback to be able to evaluate and save the results from several validation sets during training

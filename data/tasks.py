@@ -125,5 +125,5 @@ def load_task(TASK=2):
         x_target=x_chest14
         y_target=y_chest14
     else: 
-        raise Exception('Task '+str(task)' does not exist')
+        raise Exception('Task '+str(task)+' does not exist')
     return x_source, y_source, x_target, y_target
