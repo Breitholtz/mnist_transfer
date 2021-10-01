@@ -7,7 +7,7 @@ from data import usps
 from data.label_shift import label_shift_linear
 
 def load_task(TASK=2):
-    ### loads the data needed for the specific task
+    ### loads the data needed for the specific task, @TODO: make binary a parameter and return binary labels
 
     if TASK == 1 or TASK == 2:
         x_train, y_train, x_test, y_test = mnist.load_mnist()
@@ -18,15 +18,12 @@ def load_task(TASK=2):
         x_full=np.append(x_train,x_test, axis=0)
         y_full=np.append(y_train,y_test, axis=0)
         
-        ### MNIST-M all data
-        x_full_m=np.append(x_train_m,x_test_m, axis=0)
-        y_full_m=np.append(y_train_m,y_test_m, axis=0)
+        
         
         
         ## shift the distributions to create source and target distributions
         x_shift, y_shift, x_shift_target, y_shift_target = label_shift_linear(x_full,y_full,1/12,[0,1,2,3,4,5,6,7,8,9])
-        x_shift_m, y_shift_m,x_shift_target_m, y_shift_target_m = \
-        label_shift_linear(x_full_m,y_full_m,1/12,[0,1,2,3,4,5,6,7,8,9],decreasing=False)
+        
         if TASK==1:
             ###### label density shifted mnist
             x_source=x_shift
@@ -36,6 +33,12 @@ def load_task(TASK=2):
         else:
             #### MIXED MNIST and MNIST-m
             
+            ### MNIST-M all data
+            x_full_m=np.append(x_train_m,x_test_m, axis=0)
+            y_full_m=np.append(y_train_m,y_test_m, axis=0)
+            ## shift the distributions to create source and target distributions
+            x_shift_m, y_shift_m,x_shift_target_m, y_shift_target_m = \
+        label_shift_linear(x_full_m,y_full_m,1/12,[0,1,2,3,4,5,6,7,8,9],decreasing=False)
             ##### calculate the label densities here
             densities=[]
             densities.append(np.sum(y_shift,axis=0))

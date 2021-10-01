@@ -25,7 +25,7 @@ from util.misc import *
 from results.plotting import *
 
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
-                  prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None):
+                  prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None,batch_size=128):
 
     print('Computing bound components for')
     print('   Prior: %s' % prior_path)
@@ -37,8 +37,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     #if not task == 2:
         #raise Exception('Model initialization for non-task-2 not implemented')
        
-    init_task_model(task,binary) ### @TODO: Use and test the arch parameter everywhere
-    # @TODO: Are the parameters for optimizer etc necessary when just loading the model?
+    M_prior=init_task_model(task,binary) ### @TODO: Use and test the arch parameter everywhere
+    M_posterior=M_prior
+     # @TODO: Are the parameters for optimizer etc necessary when just loading the model?
     M_prior.compile(loss=tf.keras.losses.categorical_crossentropy,
                    optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
                       metrics=['accuracy'],)
@@ -64,6 +65,8 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     # Load posterior weights
     M_posterior.load_weights(posterior_path)
     w_s=M_posterior.get_weights()
+    
+   
     
     t = time.time()
     
@@ -189,7 +192,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     if checkpoint[0:2]=="1_":
             updates = int(checkpoint[2:])
     else: 
-        updates = (int(checkpoint[2:])+1)*547 # @TODO: Constant hack
+        l=len(x_bound)
+        batch_num=np.ceil(l/batch_size)
+        updates = (int(checkpoint[2:])+1)*batch_num # constant hack fix untested
         
     results=pd.DataFrame({
         'Weightupdates': [updates],
