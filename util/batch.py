@@ -3,15 +3,15 @@ import os, re
 def get_job_args(task, bound='germain', alpha=0.1, sigma=[3,2], epsilon=[0.01], binary=False, n_classifiers=4):
  
     if binary:
-        with open('posteriors/'+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'rb+') as f:
-            params=f.readlines()
-        f.close()
+        #with open('posteriors/'+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'rb+') as f:
+         #   params=f.readlines()
+        #f.close()
         prior_path="priors/"+"task"+str(task)+"/Binary/"+str(int(100*alpha))+"/prior.ckpt"
         result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
     else:
-        with open('posteriors/'+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'rb+') as f:
-            params=f.readlines()
-        f.close()
+        #with open('posteriors/'+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'rb+') as f:
+        #    params=f.readlines()
+        #f.close()
         prior_path="priors/"+"task"+str(task)+"/"+str(int(100*alpha))+"/prior.ckpt"
         result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
 

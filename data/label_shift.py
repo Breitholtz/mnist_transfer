@@ -76,7 +76,7 @@ def label_shift_linear(X,y,delta,labels,decreasing=True):
         #print(T.shape)
     return([X_2, y_2, x_target, y_target])
 
-def plot_labeldist(labels,y_1,label_1):
+def plot_labeldist(labels,y_1,label_1,save=False):
     """
     labels: a vector of the possible labels i.e. for MNIST we have labels=[0,1,2,3,4,5,6,7,8,9]
     y_1: labels of dataset
@@ -118,8 +118,10 @@ def plot_labeldist(labels,y_1,label_1):
     ax.legend()
     
     plt.show()
+    if save:
+        plt.savefig("labelshift.png",dpi=600)
     
-def plot_splitbars(labels,y_1,y_2,label_1,label_2):
+def plot_splitbars(labels,y_1,y_2,label_1,label_2,save=False):
     """
     labels: a vector of the possible labels i.e. for MNIST we have labels=[0,1,2,3,4,5,6,7,8,9]
     y_1: labels of dataset1
@@ -167,7 +169,9 @@ def plot_splitbars(labels,y_1,y_2,label_1,label_2):
     ax.set_xlabel('Labels')
     ax.set_title('Label distribution')
     ax.legend()
-    plt.show()
+    #plt.show()
+    if save:
+        plt.savefig("labelshift.png",dpi=600)
     
 def make_splits(y_source,x_shift,save=False):
     ##### make index lists for train and test splits for source

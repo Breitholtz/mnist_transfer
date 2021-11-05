@@ -76,10 +76,10 @@ if __name__ == '__main__':
     
     if binary:
         result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+\
-            "_"+str(int(100*alpha))+"_"+str(sigma[0])+str(sigma[1])+'_'+checkpoint+'_results.pkl'
+            "_"+str(int(100*alpha))+"_"+str(sigma[0])+str(sigma[1])+'_'+str(seed)+'_'+checkpoint+'_results.pkl'
     else:
         result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
-        "_"+str(sigma[0])+str(sigma[1])+'_'+checkpoint+'_results.pkl'
+        "_"+str(sigma[0])+str(sigma[1])+'_'+str(seed)+'_'+checkpoint+'_results.pkl'
         
     # Create dir
     os.makedirs(os.path.dirname(result_path), exist_ok=True)

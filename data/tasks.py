@@ -11,7 +11,7 @@ def load_task(TASK=2):
 
     if TASK == 1 or TASK == 2:
         x_train, y_train, x_test, y_test = mnist.load_mnist()
-        x_train_m, y_train_m, x_test_m, y_test_m = mnistm.load_mnistm(y_train,y_test)
+        
         
         ###### Add train and test together 
         ### MNIST all data
@@ -32,7 +32,7 @@ def load_task(TASK=2):
             y_target=y_shift_target
         else:
             #### MIXED MNIST and MNIST-m
-            
+            x_train_m, y_train_m, x_test_m, y_test_m = mnistm.load_mnistm(y_train,y_test)
             ### MNIST-M all data
             x_full_m=np.append(x_train_m,x_test_m, axis=0)
             y_full_m=np.append(y_train_m,y_test_m, axis=0)
@@ -50,7 +50,7 @@ def load_task(TASK=2):
             L=len(densities[0])
             interdomain_densities = [[] for x in range(2)]
             for i in range(L):
-                ## all densities are # in mnist over # in mnist-m
+                ## all densities are (#samples from mnist) over (#samples from mnist-m)
                 interdomain_densities[0].append(densities[0][i]/densities[1][i])
                 interdomain_densities[1].append(densities[2][i]/densities[3][i])
             print(interdomain_densities)
@@ -59,7 +59,9 @@ def load_task(TASK=2):
             y_source=np.append(y_shift,y_shift_m, axis=0)
             x_target=np.append(x_shift_target,x_shift_target_m, axis=0)
             y_target=np.append(y_shift_target,y_shift_target_m, axis=0)
-       
+            
+            plot_splitbars([0,1,2,3,4,5,6,7,8,9],y_shift,y_shift_m,"MNIST","MNIST-M",save=True)
+   
     elif TASK==3:
         #### MNIST -> MNIST-m
         ### load MNIST and MNIST-M
