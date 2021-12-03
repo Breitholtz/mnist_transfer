@@ -23,7 +23,11 @@ from experiments.DA_bound import *
 from util.kl import *
 from util.misc import *
 from results.plotting import *
-
+def error_from_prediction(pred,y):
+        ### note that this is for binary classification, when multiclass is used you have to change the 2 in the denominator to num_classes
+    pred=make_01(pred)
+    length=len(pred)
+    return np.sum(np.abs(pred-y))/(2*length)
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
                   prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None,batch_size=128):
 
@@ -66,109 +70,110 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     M_posterior.load_weights(posterior_path)
     w_s=M_posterior.get_weights()
     
-   
-    
-    t = time.time()
-    
+  
     ## do X draws of the posterior, for two separate classifiers
     sigma_tmp=sigma
     sigma=sigma[0]*10**(-1*sigma[1])
+    e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std=draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,M_posterior)
+
+#     print('Drawing classifiers...')
+#     w_s_draws = draw_classifier(w_s, sigma, num_classifiers=n_classifiers)
+#     w_s_draws2 = draw_classifier(w_s, sigma, num_classifiers=n_classifiers)
     
-    print('Drawing classifiers...')
-    w_s_draws = draw_classifier(w_s, sigma, num_classifiers=n_classifiers)
-    w_s_draws2 = draw_classifier(w_s, sigma, num_classifiers=n_classifiers)
+#     elapsed = time.time() - t
+#     print('Time spent drawing the classifiers: %.4fs' % elapsed)
     
-    elapsed = time.time() - t
-    print('Time spent drawing the classifiers: %.4fs' % elapsed)
+#     """
+#     Calculate train and target errors
+#     """
     
-    """
-    Calculate train and target errors
-    """
-    
-    errorsum=[]
-    target_errorsum=[]
+#     errorsum=[]
+#     target_errorsum=[]
 
-    y_bound = np.array(y_bound)
-    y_target = np.array(y_target)
+#     y_bound = np.array(y_bound)
+#     y_target = np.array(y_target)
 
-    ######## in here we should make the results save in a vector for each part to be able to calculate
-    ######## the standard deviation and be able to get error bars on things.
-    print('Calculating errors...')
-    t = time.time()
-    for h in w_s_draws:
-        M_posterior.set_weights(h)
-        errorsum.append((1-M_posterior.evaluate(x_bound,y_bound,verbose=0)[1]))
-        target_errorsum.append((1-M_posterior.evaluate(x_target,y_target,verbose=0)[1]))
+#     ######## in here we should make the results save in a vector for each part to be able to calculate
+#     ######## the standard deviation and be able to get error bars on things.
+#     print('Calculating errors...')
+#     t = time.time()
+#     for h in w_s_draws:
+#         M_posterior.set_weights(h)
+#         errorsum.append((1-M_posterior.evaluate(x_bound,y_bound,verbose=0)[1]))
+#         target_errorsum.append((1-M_posterior.evaluate(x_target,y_target,verbose=0)[1]))
 
-    for hprime in w_s_draws2:
-        M_posterior.set_weights(hprime)
-        errorsum.append((1-M_posterior.evaluate(x_bound,y_bound,verbose=0)[1]))
-        target_errorsum.append((1-M_posterior.evaluate(x_target,y_target,verbose=0)[1]))
+#     for hprime in w_s_draws2:
+#         M_posterior.set_weights(hprime)
+#         errorsum.append((1-M_posterior.evaluate(x_bound,y_bound,verbose=0)[1]))
+#         target_errorsum.append((1-M_posterior.evaluate(x_target,y_target,verbose=0)[1]))
 
-    train_germain = np.mean(errorsum) 
-    target_germain = np.mean(target_errorsum)  
-    error_std = np.std(errorsum)
-    target_error_std = np.std(target_errorsum)
-    elapsed = time.time() - t
-    print('Time spent calculating errors: %.4fs' % elapsed)
+#     train_germain = np.mean(errorsum) 
+#     target_germain = np.mean(target_errorsum)  
+#     error_std = np.std(errorsum)
+#     target_error_std = np.std(target_errorsum)
+#     elapsed = time.time() - t
+#     print('Time spent calculating errors: %.4fs' % elapsed)
     
     
-    """
-    Calculate joint errors
-    @TODO: This part should be merged with the above. Errors can be readibly computed from the predictions
-    """
+#     """
+#     Calculate joint errors
+#     @TODO: This part should be merged with the above. Errors can be readibly computed from the predictions
+#     """
     
-    e_ssum=[]
-    e_tsum=[]
-    d_txsum=[]
-    d_sxsum=[]
-    d_tx_h=0
-    d_sx_h=0
-    d_tx_hprime=0
-    d_sx_hprime=0
+#     e_ssum=[]
+#     e_tsum=[]
+#     d_txsum=[]
+#     d_sxsum=[]
+#     d_tx_h=0
+#     d_sx_h=0
+#     d_tx_hprime=0
+#     d_sx_hprime=0
 
-    t = time.time()
+#     t = time.time()
 
-    #### Here we just do the four pairs so there is no cross-usage
-    #### this to avoid compromising the independence of the values which makes the CI useless
+#     #### Here we just do the four pairs so there is no cross-usage
+#     #### this to avoid compromising the independence of the values which makes the CI useless
 
-    print('Computing joint errors and disagreements...')
-    for i, h in enumerate(w_s_draws):
-        M_posterior.set_weights(h)
-        d_tx_h=M_posterior.predict(x_target,verbose=0)
-        d_sx_h=M_posterior.predict(x_bound,verbose=0)
-        d_sx_h=make_01(d_sx_h)
-        d_tx_h=make_01(d_tx_h)
+#     print('Computing joint errors and disagreements...')
+#     for i, h in enumerate(w_s_draws):
+#         M_posterior.set_weights(h)
+#         d_tx_h=M_posterior.predict(x_target,verbose=0)
+#         d_sx_h=M_posterior.predict(x_bound,verbose=0)
+#         d_sx_h=make_01(d_sx_h)
+#         d_tx_h=make_01(d_tx_h)
 
-        hprime=w_s_draws2[i]
-        M_posterior.set_weights(hprime)
-        d_tx_hprime=M_posterior.predict(x_target,verbose=0)
-        d_sx_hprime=M_posterior.predict(x_bound,verbose=0)
-        d_sx_hprime=make_01(d_sx_hprime)
-        d_tx_hprime=make_01(d_tx_hprime)
+#         hprime=w_s_draws2[i]
+#         M_posterior.set_weights(hprime)
+#         d_tx_hprime=M_posterior.predict(x_target,verbose=0)
+#         d_sx_hprime=M_posterior.predict(x_bound,verbose=0)
+#         d_sx_hprime=make_01(d_sx_hprime)
+#         d_tx_hprime=make_01(d_tx_hprime)
 
-        e_ssum.append(joint_error(d_sx_h,d_sx_hprime,y_bound))
-        d_sxsum.append(classifier_disagreement(d_sx_h,d_sx_hprime))
-        e_tsum.append(joint_error(d_tx_h,d_tx_hprime,y_target))
-        d_txsum.append(classifier_disagreement(d_tx_h,d_tx_hprime))
+#         e_ssum.append(joint_error(d_sx_h,d_sx_hprime,y_bound))
+#         d_sxsum.append(classifier_disagreement(d_sx_h,d_sx_hprime))
+#         e_tsum.append(joint_error(d_tx_h,d_tx_hprime,y_target))
+#         d_txsum.append(classifier_disagreement(d_tx_h,d_tx_hprime))
 
         
-    # Means
-    e_s = np.mean(e_ssum)
-    d_sx = np.mean(d_sxsum)
-    e_t = np.mean(e_tsum)
-    d_tx = np.mean(d_txsum)
+#     # Means
+#     e_s = np.mean(e_ssum)
+#     d_sx = np.mean(d_sxsum)
+#     e_t = np.mean(e_tsum)
+#     d_tx = np.mean(d_txsum)
     
-    # Stds
-    e_s_std = np.std(e_ssum)
-    d_sx_std = np.std(d_sxsum)
-    e_t_std = np.std(e_tsum)
-    d_tx_std = np.std(d_txsum)
+#     # Stds
+#     e_s_std = np.std(e_ssum)
+#     d_sx_std = np.std(d_sxsum)
+#     e_t_std = np.std(e_tsum)
+#     d_tx_std = np.std(d_txsum)
     
-    elapsed = time.time() - t
-    print("Time spent calculating joint errors and disagreements: "+str(elapsed)+"\n")    
+#     elapsed = time.time() - t
+#     print("Time spent calculating joint errors and disagreements: "+str(elapsed)+"\n")    
 
 
+    
+    
+    
     """
     Compute the KL divergence
     """
@@ -265,6 +270,81 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     f.close()
     return results
     """
+def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,M_posterior):
+    errorsum=[]
+    target_errorsum=[]
+    e_ssum=[]
+    e_tsum=[]
+    d_txsum=[]
+    d_sxsum=[]
+    d_tx_h=0
+    d_sx_h=0
+    d_tx_hprime=0
+    d_sx_hprime=0
+    for i in range(n_classifiers):
+        
+        ### do a loop and draw two classifiers for each loop
+        print('Drawing classifiers...')
+        h = draw_classifier(w_s, sigma, num_classifiers=1)[0]
+        hprime = draw_classifier(w_s, sigma, num_classifiers=1)[0]
+
+        """
+        Calculate train and target errors
+        """
+        y_bound = np.array(y_bound)
+        y_target = np.array(y_target)
+
+        ######## in here we should make the results save in a vector for each part to be able to calculate
+        ######## the standard deviation and be able to get error bars on things.
+        print('Calculating errors, joint errors and disagreements...')
+        t = time.time()
+        ### for the first draw
+        M_posterior.set_weights(h)
+        d_tx_h=M_posterior.predict(x_target,verbose=0)
+        d_sx_h=M_posterior.predict(x_bound,verbose=0)
+        d_sx_h=make_01(d_sx_h)
+        d_tx_h=make_01(d_tx_h)
+
+        errorsum.append(error_from_prediction(d_sx_h,y_bound))
+        target_errorsum.append(error_from_prediction(d_tx_h,y_target))
+        ### for the second draw
+        M_posterior.set_weights(hprime)
+        d_tx_hprime=M_posterior.predict(x_target,verbose=0)
+        d_sx_hprime=M_posterior.predict(x_bound,verbose=0)
+        d_sx_hprime=make_01(d_sx_hprime)
+        d_tx_hprime=make_01(d_tx_hprime)
+        errorsum.append(error_from_prediction(d_sx_hprime,y_bound))
+        target_errorsum.append(error_from_prediction(d_tx_hprime,y_target))
+
+        e_ssum.append(joint_error(d_sx_h,d_sx_hprime,y_bound))
+        d_sxsum.append(classifier_disagreement(d_sx_h,d_sx_hprime))
+        e_tsum.append(joint_error(d_tx_h,d_tx_hprime,y_target))
+        d_txsum.append(classifier_disagreement(d_tx_h,d_tx_hprime))
+        elapsed = time.time() - t
+        print('Time spent calculating errors, joint errors and disagreements: %.4fs' % elapsed)
+
+      
+
+        
+
+    train_germain = np.mean(errorsum) 
+    target_germain = np.mean(target_errorsum)  
+    error_std = np.std(errorsum)
+    target_error_std = np.std(target_errorsum)
+    # Means
+    e_s = np.mean(e_ssum)
+    d_sx = np.mean(d_sxsum)
+    e_t = np.mean(e_tsum)
+    d_tx = np.mean(d_txsum)
+
+    # Std-devs
+    e_s_std = np.std(e_ssum)
+    d_sx_std = np.std(d_sxsum)
+    e_t_std = np.std(e_tsum)
+    d_tx_std = np.std(d_txsum)
+
+    return e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std
+
     
 def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
     #### here we want to do a coarse grid search over a and omega to get the smallest bound 
