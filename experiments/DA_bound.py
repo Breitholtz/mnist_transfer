@@ -32,14 +32,15 @@ def calculate_germain_bound(train_error,e_s,e_t,d_tx,d_sx, KL,delta,a,omega,m,L)
     a4=np.zeros(L)
     a5=np.zeros(L)
     for i in range(L):
-        dis_rho=np.abs(e_t[i]-e_s[i])
-        lambda_rho=np.abs(d_tx[i]-d_sx[i])
+        lambda_rho=np.abs(e_t[i]-e_s[i])
+        dis_rho=np.abs(d_tx[i]-d_sx[i])
         a1[i]=omegaprime*train_error[i]
         a2[i]=aprime/2*(dis_rho)
         a3[i]=(omegaprime/omega+aprime/a)*(KL[i]+np.log(3/delta))/m
         a4[i]=lambda_rho
         a5[i]=(aprime-1)/2
         bound.append(a1[i]+a2[i]+a3[i]+a4[i]+a5[i])
+    #print(bound)
     return bound,a1,a2,a3,a4,a5
 
 def make_01(predictions):

@@ -39,13 +39,12 @@ if __name__ == '__main__':
     s = args.sigma.split('.')
     sigma = [int(s[0]), int(s[1])]
     epsilon = args.epsilon
+    delta = args.delta
     binary = args.binary>0
     n_classifiers = args.n_classifiers
     bound = args.bound
     prior_path = args.prior_path
     posterior_path = args.posterior_path
-    
-
 
     if prior_path == '': 
         prior_path = None
@@ -61,14 +60,32 @@ if __name__ == '__main__':
     if binary: 
         y_target = make_mnist_binary(y_target)
         y_source = make_mnist_binary(y_source)
-
+        
     if alpha==0:
         x_bound=x_source
-        y_bound=y_source_bin
+        y_bound=y_source
     else:
-        x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha)
+        x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha, random_state=seed)
         
-    compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, 
-                        prior_path=prior_path, bound=bound, binary=binary, sigma=sigma, 
-                        epsilon=epsilon, n_classifiers=n_classifiers)
+    print('\n'+'-'*40)
+        
+    results = compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, 
+                        prior_path=prior_path, bound=bound, binary=binary, sigma=sigma, alpha=alpha,
+                        delta=delta, epsilon=epsilon, n_classifiers=n_classifiers, seed=seed)
+    checkpoint = results['checkpoint'].values.ravel()[0]
+    
+    if binary:
+        result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+\
+            "_"+str(int(100*alpha))+"_"+str(sigma[0])+str(sigma[1])+'_'+str(seed)+'_'+checkpoint+'_results.pkl'
+    else:
+        result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
+        "_"+str(sigma[0])+str(sigma[1])+'_'+str(seed)+'_'+checkpoint+'_results.pkl'
+        
+    # Create dir
+    os.makedirs(os.path.dirname(result_path), exist_ok=True)
+
+    print('Saving results in %s ...' % result_path)
+    results.to_pickle(result_path)
+    print('Done.')
+    print('-'*40 + '\n')
    
