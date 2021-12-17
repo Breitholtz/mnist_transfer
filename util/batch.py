@@ -3,20 +3,11 @@ import os, re
 def get_job_args(task, bound='germain', alpha=0.1, sigma=[3,2], epsilon=[0.01], binary=False, n_classifiers=4):
  
     if binary:
-        #with open('posteriors/'+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'rb+') as f:
-         #   params=f.readlines()
-        #f.close()
-        prior_path="priors/"+"task"+str(task)+"/Binary/"+str(int(100*alpha))+"/prior.ckpt"
-        result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
+        prior_path="priors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        result_path="results/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
     else:
-        #with open('posteriors/'+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'rb+') as f:
-        #    params=f.readlines()
-        #f.close()
-        prior_path="priors/"+"task"+str(task)+"/"+str(int(100*alpha))+"/prior.ckpt"
-        result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
-
-    #epsilon=float(params[1]) # @TODO: Superfluous? Isn't this submitted?
-    #epochs_trained=int(params[2]) # @TODO: Unused as far as I can see
+        prior_path="priors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        result_path="results/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
      
     posterior_paths = posterior_checkpoints(task, epsilon, alpha, binary=binary)
     
@@ -41,9 +32,9 @@ def posterior_checkpoints(task, epsilon, alpha, binary=False):
     ### Here we do something more intelligent to not have to hardcode the epoch amounts. 
     ### we parse the filenames and sort them in numerical order and then load the weights
     if binary:
-        base_path="posteriors/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
+        base_path="posteriors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
     else:
-        base_path="posteriors/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
+        base_path="posteriors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
         
     list1=[]
     list2=[]
@@ -64,9 +55,9 @@ def posterior_checkpoints(task, epsilon, alpha, binary=False):
     list1.extend(list2)
     Ws=list1
         
-    path="posteriors/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"/"#"{epoch:0d}.ckpt"
+    path="posteriors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"/"#"{epoch:0d}.ckpt"
     if binary:
-        path="posteriors/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"/"#"{epoch:0d}.ckpt"
+        path="posteriors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"/"#"{epoch:0d}.ckpt"
     
     posterior_paths = [os.path.join(path, str(checkpoint)+".ckpt") for checkpoint in Ws]
     

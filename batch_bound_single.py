@@ -54,12 +54,8 @@ if __name__ == '__main__':
     ################################################################################
 
     print('Loading data...')
-    x_source, y_source, x_target, y_target = load_task(task)
+    x_source, y_source, x_target, y_target = load_task(task,binary)
     
-    print('Making data binary...')
-    if binary: 
-        y_target = make_mnist_binary(y_target)
-        y_source = make_mnist_binary(y_source)
         
     if alpha==0:
         x_bound=x_source

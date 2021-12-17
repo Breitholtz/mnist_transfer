@@ -29,7 +29,7 @@ def error_from_prediction(pred,y):
     length=len(pred)
     return np.sum(np.abs(pred-y))/(2*length)
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
-                  prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None,batch_size=128):
+                  prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None,batch_size=128,architecture="lenet"):
 
     print('Computing bound components for')
     print('   Prior: %s' % prior_path)
@@ -41,7 +41,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     #if not task == 2:
         #raise Exception('Model initialization for non-task-2 not implemented')
        
-    M_prior=init_task_model(task,binary) ### @TODO: Use and test the arch parameter everywhere
+    M_prior=init_task_model(task,binary,architecture) ### @TODO: Use and test the arch parameter everywhere
     M_posterior=M_prior
      # @TODO: Are the parameters for optimizer etc necessary when just loading the model?
     M_prior.compile(loss=tf.keras.losses.categorical_crossentropy,
@@ -54,9 +54,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     
     ### load the prior weights if there are any
     if(binary and alpha != 0):
-        prior_path="priors/"+"task"+str(task)+"/Binary/"+str(int(100*alpha))+"/prior.ckpt"
+        prior_path="priors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
     elif(alpha != 0):
-        prior_path="priors/"+"task"+str(task)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        prior_path="priors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
         
     print('Loading weights...')
     if alpha==0 or prior_path is None:

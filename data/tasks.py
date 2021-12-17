@@ -256,4 +256,14 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         else:
             y_source=make_mnist_binary(y_source)
             y_target=make_mnist_binary(y_target)
-    return x_source, np.array(y_source), x_target, np.array(y_target)
+    #### shuffle the data using some seed 
+    np.random.seed()
+    L=len(y_source)
+    source_indices=np.random.permutation(L)
+    L2=len(y_target)
+    target_indices=np.random.permutation(L2)
+    x_source=x_source[source_indices]
+    
+    x_target=x_target[target_indices]
+  
+    return x_source, np.array(y_source)[source_indices], x_target, np.array(y_target)[target_indices]
