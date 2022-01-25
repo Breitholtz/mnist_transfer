@@ -152,7 +152,42 @@ def load_from_csv(imgs_path,csv_path,resized=False):
             
             arr.append(os.path.join(imgs_path, name))
         return arr,label_arr
-    
+def load_from_csv2(imgs_path,csv_path,resized=False):
+    _LABELS = collections.OrderedDict({
+            "-1.0": "uncertain",
+            "1.0": "positive",
+            "0.0": "negative",
+            "": "unmentioned",
+        })
+    labeldict={"positive":1,"negative":0, "unmentioned":0,"uncertain":0} ### sets all uncertain labels to 1
+    overlapping_labels=[0,2,5,6,8,10] ## according to pham et al. NF,CM,ED,CD,AC,PE
+    ##### loads chexpert filenames and labels from files
+    label_arr=[]
+    arr=[]
+    with tf.io.gfile.GFile(csv_path) as csv_f:
+        reader = csv.DictReader(csv_f)
+        # Get keys for each label from csv
+        label_keys = reader.fieldnames[5:]
+
+        for row in reader:
+            # Get image based on indicated path in csv
+            name = row["Path"]
+            labels = [_LABELS[row[key]] for key in label_keys]
+            labels_overlap=[labeldict[labels[i]] for i in overlapping_labels]
+            if resized:
+                A=name.split('/')[1:]
+                path="resized32chex"
+                for a in A:
+                    path+="/"+a
+                name=path
+                
+                    
+            ## save the image_name and the label array
+            label_arr.append(labels_overlap)
+            #print(name)
+            
+            arr.append(os.path.join(imgs_path, name))
+        return arr,label_arr    
 def make_xray14_labels():
     ##### load the labels and convert the labels to binary vectors which maps the occurrence of a label to a 1
     data_path="/home/adam/Code/Datasets/chestXray14/"

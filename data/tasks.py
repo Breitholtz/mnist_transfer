@@ -1,10 +1,12 @@
-import numpy as np
 
+
+import numpy as np
+import sys
 from data import mnist_m as mnistm
 from data import mnist
 from data import svhn
 from data import usps
-from data.label_shift import label_shift_linear, plot_splitbars
+from data.label_shift import label_shift_linear, plot_splitbars, label_shift
 
 def binarize(y,x,num_labels=6):
     ## take in one hot label encoding and make it into either 'label x' or 'not label x'
@@ -125,7 +127,7 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         y_target=y_full_m
      
     elif TASK==4:
-        #raise Exception('Not implemented/tested')
+       
         #### MNIST->USPS
         
         x_train, y_train, x_test, y_test = mnist.load_mnist()
@@ -145,7 +147,6 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         x_target=x_usps
         y_target=y_usps
     elif TASK==5:
-        #raise Exception('Not implemented/tested')
         #### MNIST -> SVHN
         
         x_train, y_train, x_test, y_test = mnist.load_mnist()
@@ -165,6 +166,7 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         x_target=x_svhn
         y_target=y_svhn
     elif TASK==6:
+         #### Chexpert+chestxray14 mix -> same mix but labels are shifted
         from sklearn.model_selection import train_test_split
         #data_path2="/cephyr/NOBACKUP/groups/snic2021-23-538/"
         data_path="/cephyr/users/adambre/Alvis/mnist_transfer/"
@@ -174,10 +176,7 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         x_chex=np.load(data_path+"chexpert_"+str(img_size)+".npy",allow_pickle=True)
         y_chex=np.load(data_path+"chexpert_"+str(img_size)+"_labels.npy",allow_pickle=True)
 
-        ### Binarize labels
-
-        y1=binarize(y_chest,2)
-        y2=binarize(y_chex,2)
+        
 
 
         ### do standard scaling
@@ -194,20 +193,40 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
 
         mu2=np.mean(x_chex)
         x_chex -= mu
+        ## print amount of each labels in the dataset
+        #print(np.sum(y_chex,axis=0))
+        #print(np.sum(y_chest,axis=0))
+        #sys.exit(-1)
+        
+        ## two datasets of different lengths, want to induce domain imbalance between source and target, 
+        ## we do 20% of samples from each label in chestxray14 is added to chexpert to create the source, rest is target, i.e. 
+        ## there is no chexpert in the target AND source is much larger than the target
+        x_source=x_chex
+        y_source=y_chex
+        
+        for label in range(5):
+            # remove some percentage of each label, now 20% -> beta_inf=4
+            x_shift, y_shift, x_shift_target, y_shift_target = label_shift(x_chest,y_chest,0.2,label)
+            x_chest=x_shift
+            y_chest=y_shift
+            # append to source
+            np.append(x_source,x_shift_target)
+            np.append(y_source,y_shift_target)
+        # target is the remaining samples from chestxray14
+        x_target=x_chest
+        y_target=y_chest
 
-        print('mean, variance', mu, sigma)
-        print("---------------Load ChestXray14----------------")
-        print(x_chest.shape, y1.shape)
-        print('mean, variance', mu2, sigma2)
-        print("---------------Load CheXpert----------------")
-        print(x_chex.shape, y2.shape)
+        ### Binarize labels
 
-        ## add them to each other
-        X=np.append(x_chest, x_chex,axis=0)
-        y=np.append(y1, y2,axis=0)
-        ### 
-        x_source, x_target, y_source , y_target = train_test_split(X,y,test_size=0.5,random_state=69105)
+        y_source=binarize(y_source,2)
+  
+        y_target=binarize(y_target,2)
+        
+        
+      
+
     elif TASK==7:
+        #### Chexpert  ->  chestxray14
         data_path="/cephyr/users/adambre/Alvis/mnist_transfer/"
         x_chest=np.load(data_path+"chestxray14_"+str(img_size)+".npy",allow_pickle=True)
         y_chest=np.load(data_path+"chestxray14_"+str(img_size)+"_labels.npy",allow_pickle=True)
@@ -243,9 +262,9 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         print("---------------Load CheXpert----------------")
         print(x_chex.shape, y_chex.shape)
         x_source=x_chex
-        y_source=y_chex
+        y_source=y2
         x_target=x_chest
-        y_target=y_chest
+        y_target=y1
     else: 
         raise Exception('Task '+str(task)+' does not exist')
      

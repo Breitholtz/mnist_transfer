@@ -23,6 +23,9 @@ from experiments.DA_bound import *
 from util.kl import *
 from util.misc import *
 from results.plotting import *
+
+project_folder2="/cephyr/users/adambre/Alvis/"
+project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
 def error_from_prediction(pred,y):
         ### note that this is for binary classification, when multiclass is used you have to change the 2 in the denominator to num_classes
     pred=make_01(pred)
@@ -30,7 +33,7 @@ def error_from_prediction(pred,y):
     return np.sum(np.abs(pred-y))/(2*length)
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
                   prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None,batch_size=128,architecture="lenet"):
-
+    posterior_path=posterior_path
     print('Computing bound components for')
     print('   Prior: %s' % prior_path)
     print('   Posterior: %s' % posterior_path)
@@ -41,7 +44,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     #if not task == 2:
         #raise Exception('Model initialization for non-task-2 not implemented')
        
-    M_prior=init_task_model(task,binary,architecture) ### @TODO: Use and test the arch parameter everywhere
+    M_prior=init_task_model(task,binary,architecture) 
     M_posterior=M_prior
      # @TODO: Are the parameters for optimizer etc necessary when just loading the model?
     M_prior.compile(loss=tf.keras.losses.categorical_crossentropy,
@@ -54,9 +57,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     
     ### load the prior weights if there are any
     if(binary and alpha != 0):
-        prior_path="priors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        prior_path=project_folder+"priors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
     elif(alpha != 0):
-        prior_path="priors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        prior_path=project_folder+"priors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
         
     print('Loading weights...')
     if alpha==0 or prior_path is None:
@@ -76,104 +79,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     sigma=sigma[0]*10**(-1*sigma[1])
     e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std=draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,M_posterior)
 
-#     print('Drawing classifiers...')
-#     w_s_draws = draw_classifier(w_s, sigma, num_classifiers=n_classifiers)
-#     w_s_draws2 = draw_classifier(w_s, sigma, num_classifiers=n_classifiers)
-    
-#     elapsed = time.time() - t
-#     print('Time spent drawing the classifiers: %.4fs' % elapsed)
-    
-#     """
-#     Calculate train and target errors
-#     """
-    
-#     errorsum=[]
-#     target_errorsum=[]
 
-#     y_bound = np.array(y_bound)
-#     y_target = np.array(y_target)
-
-#     ######## in here we should make the results save in a vector for each part to be able to calculate
-#     ######## the standard deviation and be able to get error bars on things.
-#     print('Calculating errors...')
-#     t = time.time()
-#     for h in w_s_draws:
-#         M_posterior.set_weights(h)
-#         errorsum.append((1-M_posterior.evaluate(x_bound,y_bound,verbose=0)[1]))
-#         target_errorsum.append((1-M_posterior.evaluate(x_target,y_target,verbose=0)[1]))
-
-#     for hprime in w_s_draws2:
-#         M_posterior.set_weights(hprime)
-#         errorsum.append((1-M_posterior.evaluate(x_bound,y_bound,verbose=0)[1]))
-#         target_errorsum.append((1-M_posterior.evaluate(x_target,y_target,verbose=0)[1]))
-
-#     train_germain = np.mean(errorsum) 
-#     target_germain = np.mean(target_errorsum)  
-#     error_std = np.std(errorsum)
-#     target_error_std = np.std(target_errorsum)
-#     elapsed = time.time() - t
-#     print('Time spent calculating errors: %.4fs' % elapsed)
-    
-    
-#     """
-#     Calculate joint errors
-#     @TODO: This part should be merged with the above. Errors can be readibly computed from the predictions
-#     """
-    
-#     e_ssum=[]
-#     e_tsum=[]
-#     d_txsum=[]
-#     d_sxsum=[]
-#     d_tx_h=0
-#     d_sx_h=0
-#     d_tx_hprime=0
-#     d_sx_hprime=0
-
-#     t = time.time()
-
-#     #### Here we just do the four pairs so there is no cross-usage
-#     #### this to avoid compromising the independence of the values which makes the CI useless
-
-#     print('Computing joint errors and disagreements...')
-#     for i, h in enumerate(w_s_draws):
-#         M_posterior.set_weights(h)
-#         d_tx_h=M_posterior.predict(x_target,verbose=0)
-#         d_sx_h=M_posterior.predict(x_bound,verbose=0)
-#         d_sx_h=make_01(d_sx_h)
-#         d_tx_h=make_01(d_tx_h)
-
-#         hprime=w_s_draws2[i]
-#         M_posterior.set_weights(hprime)
-#         d_tx_hprime=M_posterior.predict(x_target,verbose=0)
-#         d_sx_hprime=M_posterior.predict(x_bound,verbose=0)
-#         d_sx_hprime=make_01(d_sx_hprime)
-#         d_tx_hprime=make_01(d_tx_hprime)
-
-#         e_ssum.append(joint_error(d_sx_h,d_sx_hprime,y_bound))
-#         d_sxsum.append(classifier_disagreement(d_sx_h,d_sx_hprime))
-#         e_tsum.append(joint_error(d_tx_h,d_tx_hprime,y_target))
-#         d_txsum.append(classifier_disagreement(d_tx_h,d_tx_hprime))
-
-        
-#     # Means
-#     e_s = np.mean(e_ssum)
-#     d_sx = np.mean(d_sxsum)
-#     e_t = np.mean(e_tsum)
-#     d_tx = np.mean(d_txsum)
-    
-#     # Stds
-#     e_s_std = np.std(e_ssum)
-#     d_sx_std = np.std(d_sxsum)
-#     e_t_std = np.std(e_tsum)
-#     d_tx_std = np.std(d_txsum)
-    
-#     elapsed = time.time() - t
-#     print("Time spent calculating joint errors and disagreements: "+str(elapsed)+"\n")    
-
-
-    
-    
-    
     """
     Compute the KL divergence
     """
@@ -229,48 +135,10 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     
     return results 
 
+def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,posterior_model):
     """
-    The reimaining part only makes sense in the context of a set of snapshots
-    
-    # Number of samples 
-    m=len(y_bound)
-    
-     # calculate disrho bound
-    [res,bestparam, boundparts]=grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m)
-    
-    # calculate beta bound
-    [res2,bestparam2, boundparts2]=grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,beta_bound=True)            
-                
-    results['germain_bound']=res
-    print("Germain bound"+str(res))
-    print("[a, omega]= "+str(bestparam))
-    
-    Best=np.zeros([len(res),1])
-    Best[0]=bestparam[0]
-    Best[1]=bestparam[1]
-    Best[2]=CLASSIFIERS
-    #print(Best)
-    results['bestparam']=Best
-    results['boundpart1_germain']=boundparts[0]
-    results['boundpart2_germain']=boundparts[1]
-    results['boundpart3_germain']=boundparts[2]
-    results['boundpart4_germain']=boundparts[3]
-    results['boundpart5_germain']=boundparts[4]
-    ## beta bound
-    results['beta_bound']=res2
-    results['beta_boundpart1']=boundparts2[0]
-    results['beta_boundpart2']=boundparts2[1]
-    results['beta_boundpart3']=boundparts2[2]
-    
-    fpath = project_folder+'mnist_transfer/'+result_path+"_results.pkl"
-    print('Saving into: %s' % fpath)
-    
-    with open(fpath,'wb') as f:
-        pickle.dump(results,f)
-    f.close()
-    return results
+    As the name says, we draw classifiers and compute the necessary quantities for the different bounds
     """
-def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,M_posterior):
     errorsum=[]
     target_errorsum=[]
     e_ssum=[]
@@ -299,18 +167,18 @@ def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound
         print('Calculating errors, joint errors and disagreements...')
         t = time.time()
         ### for the first draw
-        M_posterior.set_weights(h)
-        d_tx_h=M_posterior.predict(x_target,verbose=0)
-        d_sx_h=M_posterior.predict(x_bound,verbose=0)
+        posterior_model.set_weights(h)
+        d_tx_h=posterior_model.predict(x_target,verbose=0)
+        d_sx_h=posterior_model.predict(x_bound,verbose=0)
         d_sx_h=make_01(d_sx_h)
         d_tx_h=make_01(d_tx_h)
 
         errorsum.append(error_from_prediction(d_sx_h,y_bound))
         target_errorsum.append(error_from_prediction(d_tx_h,y_target))
         ### for the second draw
-        M_posterior.set_weights(hprime)
-        d_tx_hprime=M_posterior.predict(x_target,verbose=0)
-        d_sx_hprime=M_posterior.predict(x_bound,verbose=0)
+        posterior_model.set_weights(hprime)
+        d_tx_hprime=posterior_model.predict(x_target,verbose=0)
+        d_sx_hprime=posterior_model.predict(x_bound,verbose=0)
         d_sx_hprime=make_01(d_sx_hprime)
         d_tx_hprime=make_01(d_tx_hprime)
         errorsum.append(error_from_prediction(d_sx_hprime,y_bound))
@@ -342,11 +210,11 @@ def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound
     d_sx_std = np.std(d_sxsum)
     e_t_std = np.std(e_tsum)
     d_tx_std = np.std(d_txsum)
-
+    #del posterior_model
     return e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std
 
     
-def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
+def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,L,beta_bound=False,beta_inf=1):
     #### here we want to do a coarse grid search over a and omega to get the smallest bound 
     print("Starting gridsearch....")
     avec=[0.001,0.005,0.01,0.05,0.1,0.5,1,5,10,50,100,500,1000,5000,10000,50000,100000]
@@ -355,12 +223,13 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
     res=[]
     bestparam=[0,0]
     i = 0
-    delta_p = delta/(len(avec)*len(omegas))
+    num_coeff=len(avec)*len(omegas)
+    delta_p = delta/(num_coeff)
+    
     for a in avec:
         for omega in omegas:
-            i += 1
             if beta_bound:
-                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,L)
+                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,L,beta_inf)
             else:
                 germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m,L)
             if min(germain_bound)<tmp:
@@ -379,12 +248,11 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
     else:## no bound better than the max int was found
         avec=np.arange(-1,1,0.1)
     boundparts=[0,0,0,0,0]
-    delta_p = delta/(len(avec)*len(omegas) + i)
+    delta_p = delta/(len(avec)*len(omegas) + num_coeff)
     for a in avec:
         for omega in omegas:
-            i += 1
             if beta_bound:
-                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,L)
+                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,L)
             else:
                 germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m,L)
                 boundparts=[a1,a2,a3,a4,a5]
@@ -395,14 +263,56 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,L,beta_bound=False):
                 res=germain_bound
                 bestparts = boundparts
                 bestparam=[a,omega]
-                
-    return res, bestparam, boundparts
+    if beta_bound==True:
+        print("The best bound:",res)
+        print("The best coefficients:",bestparam)            
+    return res, bestparam, bestparts
 
-def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,L,BETA=0):
-    BETA=10.986111 ### hardcoded value for beta_infinity for TASK2 TODO!
-    m_s=m  ## temporary, we should pass these in
-    m_t=m  ## temporary, we should pass these in
-    bprime=BETA*b/(1-np.exp(-b))
+def grid_search_single(train_error,KL,delta,m,MMD):
+    """
+    A very simple sweep over some values for beta in the mcallester mmd bound.
+    """
+    betas=[0.001,0.005,0.01,0.05,0.1,0.5,0.99]
+    tmp= sys.maxsize
+    res=[]
+    bestparam=1e-9
+    i = 0
+    
+    
+    delta_p = delta/(len(betas))
+    for beta in betas:
+            i += 1
+            bound, boundparts=calculate_mmd_bound(train_error,KL,delta_p,beta,m,MMD)
+            if min(bound)<tmp:
+                tmp=min(bound)
+                #print("Best bound thus far:"+str(tmp))
+                res=bound
+                bestparam=beta
+                bestparts=boundparts
+    #print("The best bound:",res)
+    #print("The best coefficients:",bestparam)
+    return res, bestparam, bestparts
+    
+def calculate_mmd_bound(train_error,KL,delta,beta,m,MMD):
+    L=len(KL)
+    bound=[]
+    a1=np.zeros(L)
+    a2=np.zeros(L)
+    a3=np.zeros(L)
+    beta_inv=(1-beta)
+    
+    
+    for i in range(L):
+        a1[i]=train_error[i]/beta
+        a2[i]=(KL[i]+np.log(1/delta))/(2*beta*beta_inv*m)
+        a3[i]=MMD ## fixed for now
+        bound.append(a1[i]+a2[i]+a3[i])
+    boundparts=[a1,a2,a3]
+    return bound, boundparts
+def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,m_target,L,BETA=0):
+    m_s=m 
+    m_t=m_target
+    bprime=BETA*(b/(1-np.exp(-b)))
     cprime=c/(1-np.exp(-c))
     
     bound=[]

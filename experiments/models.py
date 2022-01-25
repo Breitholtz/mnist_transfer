@@ -8,8 +8,23 @@ from tensorflow.keras.regularizers import l2
 
 import os
 
+def init_resnet_model(Binary=True):
+    from tensorflow.keras.applications.resnet_v2 import ResNet50V2
+    import numpy as np
     
-def init_FC_model(binary=True):
+    #model = ResNet50(weights='imagenet',include_top=False)
+    if Binary:
+        model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(32,32,3),classes=2)
+    else:
+        model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(32,32,3),classes=10)
+    model.add(Flatten())
+    if binary:
+        model.add(Dense(2, activation = 'softmax'))
+    else:
+        model.add(Dense(10, activation = 'softmax'))
+    return model
+
+def init_fc_model(binary=True):
     """
     Fully connected model, similar to rivasplata et al., dziugaite et al. etc.
     """
@@ -28,14 +43,15 @@ def init_FC_model(binary=True):
     else:
         model.add(Dense(10, activation = 'softmax'))
     return model
-def init_lr_model(flattened_size,binary=True):
+def init_lr_model(flattened_size=3072,binary=True):
     """
     Logistic regression model
     """
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import InputLayer,Dense
     model = Sequential()
-    model.add(Dense(flattened_size))#InputLayer(input_shape=(flattened_size)))
+    model.add(Dense(flattened_size,input_shape=(32,32,3),activation='relu'))#InputLayer())
+    model.add(Flatten())
     if binary:
         model.add(Dense(2,activation="softmax"))
     else:
@@ -123,6 +139,16 @@ def init_task_model(TASK=2,binary=True,arch="lenet"):
         else:
             model=init_resnet_model(binary)
     elif TASK==6:
+        #### CheXpert + chestxray14 mix
+        if arch=="lr":
+            model=init_lr_model(binary)
+        elif arch=="lenet":
+            model=init_mnist_model(binary)
+        elif arch=="fc":
+            model=init_fc_model(binary)
+        else:
+            model=init_resnet_model(binary)
+    elif TASK==7:
         #### CheXpert -> chestxray14
         if arch=="lr":
             model=init_lr_model(binary)

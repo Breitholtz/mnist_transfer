@@ -13,7 +13,8 @@ from sklearn.model_selection import train_test_split
 from data.tasks import load_task
 from bounds.bounds import *
 from util.misc import *
-  
+project_folder2="/cephyr/users/adambre/Alvis/"
+project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Compute bound parts.')
@@ -29,6 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('-B', '--bound', type=str, default='germain', dest='bound')
     parser.add_argument('-p', '--prior', type=str, default=None, dest='prior_path')
     parser.add_argument('-P', '--posterior', type=str, default='', dest='posterior_path')
+    parser.add_argument('-A', '--architecture', type=str, default='lenet', dest='architecture')
     
     args = parser.parse_args()
     print(args.__dict__)
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     bound = args.bound
     prior_path = args.prior_path
     posterior_path = args.posterior_path
-
+    architecture=args.architecture
     if prior_path == '': 
         prior_path = None
     if posterior_path == '': 
@@ -67,14 +69,14 @@ if __name__ == '__main__':
         
     results = compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, 
                         prior_path=prior_path, bound=bound, binary=binary, sigma=sigma, alpha=alpha,
-                        delta=delta, epsilon=epsilon, n_classifiers=n_classifiers, seed=seed)
+                        delta=delta, epsilon=epsilon, n_classifiers=n_classifiers, seed=seed,architecture=architecture)
     checkpoint = results['checkpoint'].values.ravel()[0]
     
     if binary:
-        result_path="results/"+"task"+str(task)+"/Binary/"+str(int(1000*epsilon))+\
+        result_path=project_folder+"results/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+\
             "_"+str(int(100*alpha))+"_"+str(sigma[0])+str(sigma[1])+'_'+str(seed)+'_'+checkpoint+'_results.pkl'
     else:
-        result_path="results/"+"task"+str(task)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
+        result_path=project_folder+"results/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+\
         "_"+str(sigma[0])+str(sigma[1])+'_'+str(seed)+'_'+checkpoint+'_results.pkl'
         
     # Create dir

@@ -48,7 +48,11 @@ if [ -z "$posterior" ]
 then 
     posterior=''
 fi
+if [ -z "$architecture" ]
+then 
+    architecture='lenet'
+fi
 
 . load_modules.sh
 
-python batch_bound_single.py -t $task -r $seed -a $alpha -s $sigma -e $epsilon -d $delta -b $binary -n $nclassifiers -B $bound -p $prior -P $posterior
+python batch_bound_single.py -t $task -r $seed -a $alpha -s $sigma -e $epsilon -d $delta -b $binary -n $nclassifiers -B $bound -p $prior -P $posterior -A $architecture

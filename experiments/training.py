@@ -6,10 +6,12 @@ import gc, re, copy
 import pandas as pd
 import pickle
 ## set the project folder to something for saving
-project_folder="/home/adam/code/"
-## custom callback to terminate training at some specific value of a metric
+project_folder2="/cephyr/users/adambre/Alvis/"
+project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
+
     
 class stop_callback(tf.keras.callbacks.Callback):
+    """Class to enable early stopping as we reach a certain training error"""
     def __init__(self, monitor='accuracy', value=0.001, verbose=0):
         super(tf.keras.callbacks.Callback, self).__init__()
         self.monitor = monitor
@@ -21,6 +23,7 @@ class stop_callback(tf.keras.callbacks.Callback):
             self.model.stop_training = True
             
 class fast_checkpoints(tf.keras.callbacks.Callback):
+    """Class to have more checkpoints in at the start of training"""
     def __init__(self,checkpoint_path,save_freq):
         super(tf.keras.callbacks.Callback, self).__init__()
         self.save_freq=save_freq
@@ -38,16 +41,32 @@ class fast_checkpoints(tf.keras.callbacks.Callback):
             os.makedirs(os.path.dirname(weight_path), exist_ok=True)
             
             self.model.save_weights(weight_path)
-            
-def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[],save=True,epsilon=0.01,Task=2,Binary=False,batch_size=128,architecture="lenet"):
+def get_learning_rate(task,architecture):
+    """Function returning the learning rate depending on architecture and task"""
+    if architecture=="lenet":
+        lr=0.003
         
+    elif architecture=="fc":
+        lr=0.03
+    else:
+        lr=0.003 ## this should correspond to resnet or some other large architecture
+    return lr
+        
+    
+    
+def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[],save=True,epsilon=0.01,Task=2,Binary=False,batch_size=128,architecture="lenet"):
+        """
+        Here we start from a prior, a random prior if alpha=0 or otherwise one which we have trained beforehand.
+        From this point we train until we achieve some predefined sample error, saving weights 10 times during the first epoch 
+        and then once after each subsequent epoch, Finally we return the final posterior weights
+        """
         TASK=Task
         
         ### x_test should be the whole of S for early stopping purposes
     
-        checkpoint_path = "posteriors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
+        checkpoint_path = project_folder+"posteriors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
         if Binary:
-            checkpoint_path = "posteriors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
+            checkpoint_path = project_folder+"posteriors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
         
         
         # Create a callback that saves the model's weights every epoch
@@ -63,12 +82,14 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
         )
         ## callback for first part
         fast_checkpoint_freq=np.ceil(len(x_train)/(batch_size*10))
+        print("fast freq",fast_checkpoint_freq)
         fast_cp_callback =fast_checkpoints(checkpoint_path,int(fast_checkpoint_freq))
         stopping_callback=stop_callback(monitor='val_acc',value=1-epsilon)
     
         M=init_task_model(TASK,Binary,architecture)
 
-        
+        #### function to choose learning rate dependent on arch and task
+        lr=get_learning_rate(TASK,architecture)
             
         ## choose loss function, optimiser etc. and train
         
@@ -83,10 +104,8 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
         import glob
         files=glob.glob(os.path.join(checkpoint_path+'/*'))
         
-        
+        ## remove any previous checkpoints
         for file in files:
-            if file==(checkpoint_path+'/params.txt'):
-                files.remove(checkpoint_path+'/params.txt')
             os.remove(file)
         
         ### load the prior weights
@@ -95,9 +114,9 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
         elif(alpha==0):
             ### save the rand. init as the prior
             if Binary:
-                prior_path="priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+                prior_path=project_folder+"priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
             else:
-                prior_path="priors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+                prior_path=project_folder+"priors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
             
             ## Create the folder
             os.makedirs(os.path.dirname(prior_path), exist_ok=True)
@@ -106,7 +125,7 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
             M.save_weights(prior_path)
         else:
             if Binary:
-                prior_path="priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+                prior_path=project_folder+"priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
                 M.load_weights(prior_path).expect_partial()
             else:
                 
@@ -123,7 +142,7 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
            epochs=1, 
            callbacks=CALLBACK,
            validation_data=(x_test, y_test),
-           verbose=0,
+           verbose=1,
                         )
         
         print("-"*40)
@@ -135,7 +154,7 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
             
         fit_info = M.fit(x_train, y_train,
            batch_size=batch_size,
-           epochs=2000, # we should have done early stopping before this completes
+           epochs=500, # we should have done early stopping before this completes, for log-regressions sake if nothing else
            callbacks=CALLBACK,
            validation_data=(x_test, y_test),
            verbose=0,
@@ -143,44 +162,29 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
         print("-"*40)
         print("Finished training posterior")
         
-         #### save the last posterior weights to disk
-        #epochs_trained=len(fit_info.history['loss'])
-        #if save:
-            ## Create the folder
-            #os.makedirs(os.path.dirname(checkpoint_path+"/2_"+str(epochs_trained)), exist_ok=True)
-            
-            
-            #M.save_weights(checkpoint_path+"/2_"+str(epochs_trained)) ###### check if we need this; TODO!!!!!!
-            
-        #### save textfile with parameters, i.e. alpha ,epochs trained and epsilon
-#         if Binary:
-#             with open('posteriors/'+"task"+str(TASK)+"/Binary/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'w') as f:
-#                 f.write('\n'.join([str(alpha), str(epsilon), str(epochs_trained)]))     
-#             f.close()
-#         else:
-#             with open('posteriors/'+"task"+str(TASK)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+'/params.txt', 'w') as f:
-#                 f.write('\n'.join([str(alpha), str(epsilon), str(epochs_trained)]))     
-#             f.close()
-        
         return M.get_weights()
     
 def train_prior(alpha,total_epochs,x_train=[],y_train=[],x_target=[],y_target=[],save=True,Task=2,Binary=False,batch_size=128,architecture="lenet"):
+    """
+    This function takes in arguments and then trains a prior for one epoch.
+    Then we compute sample and target errors for the prior and save that to a file
+    """
     TASK=Task
     
     if Binary:
         ## Create the folders
-        os.makedirs(os.path.dirname("priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha)))+"/", exist_ok=True)
-        checkpoint_path = "priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))
+        os.makedirs(os.path.dirname(project_folder+"priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha)))+"/", exist_ok=True)
+        checkpoint_path = project_folder+"priors/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))
     else:
-        os.makedirs(os.path.dirname("priors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha)))+"/", exist_ok=True)
-        checkpoint_path = "priors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha))
+        os.makedirs(os.path.dirname(project_folder+"priors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha)))+"/", exist_ok=True)
+        checkpoint_path = project_folder+"priors/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha))
     ## remove previous weights
     import glob
     files=glob.glob(os.path.join(checkpoint_path+'/*'))
     for file in files:
         os.remove(file)
     M=init_task_model(TASK,Binary,architecture)
-    #sys.exit(-1)
+    
     ### save checkpoints 10 times over the training of the prior
     l=len(x_train)
     checkpoint_freq=np.ceil(l/(batch_size*10))
@@ -189,10 +193,11 @@ def train_prior(alpha,total_epochs,x_train=[],y_train=[],x_target=[],y_target=[]
             CALLBACK=[fast_cp_callback]
     else:
             CALLBACK=[]
-            
+    
+    lr=get_learning_rate(TASK,architecture)
     ## choose loss function, optimiser etc. and train
     M.compile(loss=tf.keras.losses.categorical_crossentropy,
-               optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
+               optimizer=tf.keras.optimizers.SGD(learning_rate=lr, momentum=0.95),
                       metrics=['accuracy'],)
     fit_info = M.fit(x_train, y_train,
            batch_size=batch_size,
@@ -205,7 +210,7 @@ def train_prior(alpha,total_epochs,x_train=[],y_train=[],x_target=[],y_target=[]
     #### save the final prior weights to disk
     if save:
         os.makedirs(checkpoint_path, exist_ok=True)
-        M.save_weights(checkpoint_path+"/prior.ckpt")
+        M.save_weights(checkpoint_path+"/prior.ckpt") #### change to be a number?
      
     
     list1=[]
@@ -236,7 +241,7 @@ def train_prior(alpha,total_epochs,x_train=[],y_train=[],x_target=[],y_target=[]
 
         model=init_task_model(TASK,Binary)
         model.compile(loss=tf.keras.losses.categorical_crossentropy,
-               optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
+               optimizer=tf.keras.optimizers.SGD(learning_rate=lr, momentum=0.95),
                   metrics=['accuracy'],)
       
             
@@ -252,13 +257,15 @@ def train_prior(alpha,total_epochs,x_train=[],y_train=[],x_target=[],y_target=[]
             })
        
         ## Create the folders
-        os.makedirs(os.path.dirname(project_folder+"mnist_transfer/results/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"), exist_ok=True)
+        
         if Binary:
-            with open(project_folder+"mnist_transfer/results/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"_prior_results.pkl",'wb') as f:
+            os.makedirs(os.path.dirname(project_folder+"results/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"), exist_ok=True)
+            with open(project_folder+"results/"+"task"+str(TASK)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"_prior_results.pkl",'wb') as f:
                 pickle.dump(results,f)
             f.close()
         else:
-            with open(project_folder+"mnist_transfer/results/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha))+"_prior_results.pkl",'wb') as f:
+            os.makedirs(os.path.dirname(project_folder+"results/"+"task"+str(TASK)+"/"+str(architecture)+"/"), exist_ok=True)
+            with open(project_folder+"results/"+"task"+str(TASK)+"/"+str(architecture)+"/"+str(int(100*alpha))+"_prior_results.pkl",'wb') as f:
                 pickle.dump(results,f)
             f.close()
     return model.get_weights()
