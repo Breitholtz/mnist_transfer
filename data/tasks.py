@@ -204,15 +204,33 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
         x_source=x_chex
         y_source=y_chex
         
+        x_sourceadd=[]
+        y_sourceadd=[]
+        x_target=[]
+        y_target=[]
         for label in range(5):
             # remove some percentage of each label, now 20% -> beta_inf=4
             x_shift, y_shift, x_shift_target, y_shift_target = label_shift(x_chest,y_chest,0.2,label)
             x_chest=x_shift
             y_chest=y_shift
             # append to source
-            np.append(x_source,x_shift_target)
-            np.append(y_source,y_shift_target)
+            x_sourceadd.extend(x_shift_target)
+            y_sourceadd.extend(y_shift_target)
+            #np.append(x_source,x_shift_target)
+            #np.append(y_source,y_shift_target)
         # target is the remaining samples from chestxray14
+        
+        #print(len(y_sourceadd))
+        #print(len(y_source))
+        x_source=list(x_source)
+        y_source=list(y_source)
+        x_source.extend(x_sourceadd)
+        y_source.extend(y_sourceadd)
+        x_source=np.array(x_source)
+        y_source=np.array(y_source)
+    
+        #print(len(y_source))
+        #print(x_source.shape)
         x_target=x_chest
         y_target=y_chest
 
@@ -222,6 +240,11 @@ def load_task(TASK=2,binary=True,img_size=32,reverse=False):
   
         y_target=binarize(y_target,2)
         
+        print("source",len(y_source))
+        print(np.sum(y_source,axis=0))
+        print("-"*40)
+        print("target",len(y_target))
+        print(np.sum(y_target,axis=0))
         
       
 

@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-np.random.seed(0)
+
 from data.tasks import load_task
 def rbf_kernel(x, y, s=0.5):
     """ Vectorized Gaussian RBF kernel """
@@ -47,8 +47,8 @@ def flatten_images(x):
     N=len(x)
     return x.reshape(N,-1)
 
-def calculate_mmd(task):
-    
+def calculate_mmd(task,seed=None):
+    np.random.seed(seed)
     print("Calculating MMD")
     print("-"*40)
     

@@ -18,7 +18,7 @@ class stop_callback(tf.keras.callbacks.Callback):
         self.value = value
         self.verbose = verbose
     def on_epoch_end(self, epoch, logs={}): 
-        if(logs.get('accuracy')> self.value): # select the accuracy
+        if(logs.get('accuracy')>= self.value): # select the accuracy
             print("\n !!! training error threshold reached, no further training !!!")
             self.model.stop_training = True
             
@@ -94,7 +94,7 @@ def train_posterior(alpha,x_train,y_train,prior_weights=None,x_test=[],y_test=[]
         ## choose loss function, optimiser etc. and train
         
         M.compile(loss=tf.keras.losses.categorical_crossentropy,
-               optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
+               optimizer=tf.keras.optimizers.SGD(learning_rate=lr, momentum=0.95),
                       metrics=['accuracy'],)
         
         
