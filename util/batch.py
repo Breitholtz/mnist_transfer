@@ -1,4 +1,5 @@
 import os, re
+project_folder2="/cephyr/users/adambre/Alvis/"
 project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
 def get_job_args(task, bound='germain', alpha=0.1, sigma=[3,2], epsilon=[0.01], binary=False, n_classifiers=4, architecture="lenet"):
     """

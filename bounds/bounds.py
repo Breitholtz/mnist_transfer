@@ -18,8 +18,6 @@ from data import mnist
 from data.label_shift import label_shift_linear, plot_labeldist, plot_splitbars
 from data.tasks import *
 from experiments.training import *
-#from experiments.SL_bound import *
-#from experiments.DA_bound import *
 from util.kl import *
 from util.misc import *
 from results.plotting import *
@@ -33,12 +31,12 @@ def draw_classifier(weights,sigma,num_classifiers):
     samples num_classifiers many diffferent weights from a gaussian centered around the initial weights
     """
     w_s_draw=[[]]*num_classifiers
-    ## draw new classifiers
+
     for draw in range(len(w_s_draw)):
-        # for each weight matrix draw new normally distributed weights
+        # for each weight matrix draw new normally distributed weights around the weight matrix
         L=len(weights)
         w_tmp=weights.copy()
-        for i in range(L):#weights: ### flatten, draw, reshape
+        for i in range(L):#flatten, draw, reshape
             if(w_tmp[i].ndim>1):
                 shapes=w_tmp[i].shape
                 a=w_tmp[i].flatten()
@@ -56,10 +54,8 @@ def joint_error(prediction_h,prediction_hprime,true_label):
     """
     This computes the emp.expected joint error, i.e. we approximate e_S= E_h,h' E_x,y L(h(x),y)L(h'(x),y)    
     """
-    ## expected joint error
     shapes=prediction_h.shape
     e_s=0
-    # e_S= E_h,h' E_x,y L(h(x),y)L(h'(x),y)     
     for i in range(shapes[0]):
         for j in range(shapes[1]):
             e_s+=(prediction_h[i][j]-true_label[i][j])*(prediction_hprime[i][j]-true_label[i][j])
@@ -78,29 +74,7 @@ def classifier_disagreement(prediction_h,prediction_hprime):
             d+=1
     d/=(shapes[0])
     return d
-def calculate_germain_bound(train_error,e_s,e_t,d_tx,d_sx, KL,delta,a,omega,m,L):
-    """
-    Takes in parts and puts them together into the additive disrho bound from (Germain et al. 2013)
-    """
-    bound=[]
-    aprime=2*a/(1-np.exp(-2*a))
-    omegaprime=omega/(1-np.exp(-omega))
-    a1=np.zeros(L)
-    a2=np.zeros(L)
-    a3=np.zeros(L)
-    a4=np.zeros(L)
-    a5=np.zeros(L)
-    for i in range(L):
-        lambda_rho=np.abs(e_t[i]-e_s[i])
-        dis_rho=np.abs(d_tx[i]-d_sx[i])
-        a1[i]=omegaprime*train_error[i]
-        a2[i]=aprime/2*(dis_rho)
-        a3[i]=(omegaprime/omega+aprime/a)*(KL[i]+np.log(3/delta))/m
-        a4[i]=lambda_rho
-        a5[i]=(aprime-1)/2
-        bound.append(a1[i]+a2[i]+a3[i]+a4[i]+a5[i])
-    #print(bound)
-    return bound,a1,a2,a3,a4,a5
+
 
 
 def make_01(predictions):
@@ -119,12 +93,22 @@ def make_01(predictions):
 
 
 def error_from_prediction(pred,y):
-        ### note that this is for binary classification, when multiclass is used you have to change the 2 in the denominator to num_classes
+    """
+        Computes the error of a classifier from predictions.
+        Note that this is for binary classification, when multiclass is used you have to change the 2 in the denominator to
+        num_classes
+    """
     pred=make_01(pred)
     length=len(pred)
     return np.sum(np.abs(pred-y))/(2*length)
+
 def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_target, alpha=0.1, delta=0.05, epsilon=0.01, 
                   prior_path=None, bound='germain', binary=False, n_classifiers=4, sigma=[3,3], seed=None,batch_size=128,architecture="lenet"):
+    
+    """
+    Function which computes all the errors, standard deviations and such which we will need to present the bounds
+    """
+    
     posterior_path=posterior_path
     print('Computing bound components for')
     print('   Prior: %s' % prior_path)
@@ -134,14 +118,14 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     
     print('Initializing models...')
 
-    M_prior=init_task_model(task,binary,architecture) 
-    M_posterior=M_prior
+    prior_model=init_task_model(task,binary,architecture) 
+    posterior_model=prior_model ##### @TODO: please say that this is tested
      # @TODO: Are the parameters for optimizer etc necessary when just loading the model?
-    M_prior.compile(loss=tf.keras.losses.categorical_crossentropy,
+    prior_model.compile(loss=tf.keras.losses.categorical_crossentropy,
                    optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
                       metrics=['accuracy'],)
     
-    M_posterior.compile(loss=tf.keras.losses.categorical_crossentropy,
+    posterior_model.compile(loss=tf.keras.losses.categorical_crossentropy,
                    optimizer=tf.keras.optimizers.SGD(learning_rate=0.003, momentum=0.95),
                       metrics=['accuracy'],)
     
@@ -154,20 +138,20 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     print('Loading weights...')
     if alpha==0 or prior_path is None:
         ### do nothing, just take the random initialisation
-        w_a=M_prior.get_weights()
+        w_a=prior_model.get_weights()
     else:
-        M_prior.load_weights(prior_path)
-        w_a=M_prior.get_weights()
+        prior_model.load_weights(prior_path)
+        w_a=prior_model.get_weights()
         
     # Load posterior weights
-    M_posterior.load_weights(posterior_path)
-    w_s=M_posterior.get_weights()
+    posterior_model.load_weights(posterior_path)
+    w_s=posterior_model.get_weights()
     
   
     ## do X draws of the posterior, for two separate classifiers
     sigma_tmp=sigma
     sigma=sigma[0]*10**(-1*sigma[1])
-    e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std=draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,M_posterior)
+    e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std=draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,posterior_model)
 
 
     """
@@ -205,8 +189,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         #batch_num=np.ceil(l/batch_size) 
         #print(batch_num)
         #print(updates)
-        updates = (int(checkpoint[2:])+1)*batch_num # constant hack fix untested
+        updates = (int(checkpoint[2:])+1)*batch_num # constant hack fix untested @TODO: really should fix this !!!
         #print(updates)
+        
     results=pd.DataFrame({
         'Weightupdates': [updates],
         'train_germain': [train_germain],
@@ -294,7 +279,7 @@ def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound
       
 
         
-
+    # Errors
     train_germain = np.mean(errorsum) 
     target_germain = np.mean(target_errorsum)  
     error_std = np.std(errorsum)
@@ -310,11 +295,10 @@ def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound
     d_sx_std = np.std(d_sxsum)
     e_t_std = np.std(e_tsum)
     d_tx_std = np.std(d_txsum)
-    #del posterior_model
     return e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std
 
     
-def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,L,beta_bound=False,beta_inf=1):
+def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,beta_bound=False,beta_inf=1):
     #### here we want to do a coarse grid search over a and omega to get the smallest bound 
     print("Starting gridsearch....")
     avec=[0.001,0.005,0.01,0.05,0.1,0.5,1,5,10,50,100,500,1000,5000,10000,50000,100000]
@@ -329,9 +313,9 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,L,beta_bound
     for a in avec:
         for omega in omegas:
             if beta_bound:
-                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,L,beta_inf)
+                germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,beta_inf)
             else:
-                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m,L)
+                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m)
                 boundparts=[a1,a2,a3,a4,a5]
             if min(germain_bound)<tmp:
                 tmp=min(germain_bound)
@@ -353,22 +337,17 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,L,beta_bound
     for a in avec:
         for omega in omegas:
             if beta_bound:
-                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,L,beta_inf)
+                germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,beta_inf)
             else:
-                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m,L)
+                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m)
                 boundparts=[a1,a2,a3,a4,a5]
                 
             if min(germain_bound)<tmp:
                 tmp=min(germain_bound)
-                #print("Best finer bound thus far:"+str(tmp))
                 res=germain_bound
                 bestparts = boundparts
                 bestparam=[a,omega]
-                
-                
-    #if beta_bound==True:
-      #  print("The best bound:",res)
-      #  print("The best coefficients:",bestparam)            
+   
     return res, bestparam, bestparts
 
 def grid_search_single(train_error,KL,delta,m,MMD):
@@ -381,30 +360,53 @@ def grid_search_single(train_error,KL,delta,m,MMD):
     bestparam=1e-9
     i = 0
     
-    
     delta_p = delta/(len(betas))
     for beta in betas:
             i += 1
             bound, boundparts=calculate_mmd_bound(train_error,KL,delta_p,beta,m,MMD)
             if min(bound)<tmp:
                 tmp=min(bound)
-                #print("Best bound thus far:"+str(tmp))
                 res=bound
                 bestparam=beta
                 bestparts=boundparts
     #print("The best bound:",res)
     #print("The best coefficients:",bestparam)
     return res, bestparam, bestparts
-    
+
+def calculate_germain_bound(train_error,e_s,e_t,d_tx,d_sx, KL,delta,a,omega,m):
+    """
+    Takes in parts and puts them together into the additive disrho bound from (Germain et al. 2013)
+    """
+    L=len(KL)
+    bound=[]
+    aprime=2*a/(1-np.exp(-2*a))
+    omegaprime=omega/(1-np.exp(-omega))
+    a1=np.zeros(L)
+    a2=np.zeros(L)
+    a3=np.zeros(L)
+    a4=np.zeros(L)
+    a5=np.zeros(L)
+    for i in range(L):
+        lambda_rho=np.abs(e_t[i]-e_s[i])
+        dis_rho=np.abs(d_tx[i]-d_sx[i])
+        a1[i]=omegaprime*train_error[i]
+        a2[i]=aprime/2*(dis_rho)
+        a3[i]=(omegaprime/omega+aprime/a)*(KL[i]+np.log(3/delta))/m
+        a4[i]=lambda_rho
+        a5[i]=(aprime-1)/2
+        bound.append(a1[i]+a2[i]+a3[i]+a4[i]+a5[i])
+    return bound,a1,a2,a3,a4,a5
+
 def calculate_mmd_bound(train_error,KL,delta,beta,m,MMD):
+    """
+    Calculates our MMD bound
+    """
     L=len(KL)
     bound=[]
     a1=np.zeros(L)
     a2=np.zeros(L)
     a3=np.zeros(L)
     beta_inv=(1-beta)
-    
-    
     for i in range(L):
         a1[i]=train_error[i]/beta
         a2[i]=(KL[i]+np.log(1/delta))/(2*beta*beta_inv*m)
@@ -412,7 +414,12 @@ def calculate_mmd_bound(train_error,KL,delta,beta,m,MMD):
         bound.append(a1[i]+a2[i]+a3[i])
     boundparts=[a1,a2,a3]
     return bound, boundparts
-def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,m_target,L,BETA):
+def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,m_target,BETA):
+    """
+    Calculates the beta_\infty bound from (Germain et al. 2016) which omits the support term as we only consider 
+    situations with overlap
+    """
+    L=len(KL)
     m_s=m 
     m_t=m_target
     bprime=BETA*(b/(1-np.exp(-b)))
@@ -426,8 +433,6 @@ def calculate_beta_bound(e_s,d_tx,KL,delta,b,c,m,m_target,L,BETA):
         a1[i]=cprime/2*(d_tx[i])
         a2[i]=bprime*e_s[i]
         a3[i]=(cprime/(m_t*c)+bprime/(m_s*b))*(2*KL[i]+np.log(2/delta))
-    ## we cannot evaluate the eta term in the bound so this is it. For TASK 2 it is 0 anyway.
-    ## And for other tasks we will not evaluate this bound anyway as we probably have no way of doing so easily..
         bound.append(a1[i]+a2[i]+a3[i])
     boundparts=[a1,a2,a3]
     return bound, boundparts
