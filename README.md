@@ -16,4 +16,3 @@
 
 * The file [batch_bound_single.sbatch](batch_bound_single.sbatch) contains a Slurm script for queueing to the server, mirroring the arguments of ```batch_bound_single```. NOTE: The parameter sigma is supplied as a two-part string e.g., "3.3", not with a comma. 
 
-* TODO: Should probably move ```calculate_germain_bound.py``` (and others) to ```bounds.py``` or vice versa. 

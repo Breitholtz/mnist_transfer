@@ -8,12 +8,12 @@ from tensorflow.keras.regularizers import l2
 
 import os
 
-def init_resnet_model(Binary=True):
+def init_resnet_model(binary=True):
     from tensorflow.keras.applications.resnet_v2 import ResNet50V2
     import numpy as np
     
     #model = ResNet50(weights='imagenet',include_top=False)
-    if Binary:
+    if binary:
         model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(32,32,3),classes=2)
     else:
         model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(32,32,3),classes=10)

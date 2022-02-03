@@ -41,7 +41,9 @@ def posterior_checkpoints(task, epsilon, alpha, binary=False,architecture="lenet
         base_path=project_folder+"posteriors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
     else:
         base_path=project_folder+"posteriors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))
-        
+    ##################################################################################################
+    # parse filenames into an ordered list, first the ones with a 1 in them and then the ones with a 2
+    ##################################################################################################  
     list1=[]
     list2=[]
     dirFiles = os.listdir(base_path) #list of directory files
