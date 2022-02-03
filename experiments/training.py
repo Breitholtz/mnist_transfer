@@ -7,8 +7,8 @@ import pandas as pd
 import pickle
 import glob
 ## set the project folder to something for saving
-project_folder2="/cephyr/users/adambre/Alvis/"
-project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
+project_folder="/cephyr/users/adambre/Alvis/mnist_transfer/"
+#project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
 
 ######################################################################
 # Classes for callbacks; early stopping and saving checkpoints

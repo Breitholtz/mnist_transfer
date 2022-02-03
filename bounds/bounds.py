@@ -20,9 +20,8 @@ from data.tasks import *
 from experiments.training import *
 from util.kl import *
 from util.misc import *
-from results.plotting import *
 
-project_folder2="/cephyr/users/adambre/Alvis/"
+project_folder2="/cephyr/users/adambre/Alvis/mnist_transfer/"
 project_folder="/cephyr/NOBACKUP/groups/snic2021-23-538/mnist_transfer/"
 
 def draw_classifier(weights,sigma,num_classifiers):

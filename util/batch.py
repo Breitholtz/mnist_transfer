@@ -14,7 +14,7 @@ def get_job_args(task, bound='germain', alpha=0.1, sigma=[3,2], epsilon=[0.01], 
         result_path=project_folder+"results/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(1000*epsilon))+"_"+str(int(100*alpha))+"_"
      
     posterior_paths = posterior_checkpoints(task, epsilon, alpha, binary,architecture)
-    
+    #### iterate over the list of posterior paths and construct argument list
     arg_list = []
     for post in posterior_paths: 
         args = {
