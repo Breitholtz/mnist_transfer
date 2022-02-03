@@ -1,20 +1,19 @@
+import tensorflow.keras as keras
+from tensorflow.keras import backend as K
+from tensorflow.keras.datasets import mnist
+import numpy as np
 def load_mnist():
-    import tensorflow.keras as keras
-    from tensorflow.keras import backend as K
-    from tensorflow.keras.datasets import mnist
-    import numpy as np
+    """
+    Imports the MNIST dataset from the tf datasets
+    """
+    
     num_classes = 10
-    ## import mnist
     (x_train, lbl_train), (x_test, lbl_test) = mnist.load_data()
     x_train = np.pad(x_train,((0,0),(2,2),(2,2))) #padding to make images 32x32 and not 28x28
     x_test = np.pad(x_test,((0,0),(2,2),(2,2))) 
 
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
-
-    ## normalising
-    #x_train /= 255.0 
-    #x_test /= 255.0
 
     ## normalising to unit variance
     sigma=np.std(x_train)

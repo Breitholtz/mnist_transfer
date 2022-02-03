@@ -1,8 +1,11 @@
+import numpy as np
+import gzip
+import pickle
+import tensorflow.keras as keras
 def load_usps():
-    import numpy as np
-    import gzip
-    import pickle
-    import tensorflow.keras as keras
+    """
+    function which loads 28x28 USPS images and makes them into a usable format
+    """
     num_classes = 10
     
     ## copied and changed from https://github.com/JingWang18/Discriminative-Feature-Alignment/
@@ -13,18 +16,12 @@ def load_usps():
     label_train = data_set[0][1]
     img_test = data_set[1][0]
     label_test = data_set[1][1]
-    ### do we need this??
-    #inds = np.random.permutation(img_train.shape[0])
-  
-    #img_train = img_train[inds][:6562]
-    #label_train = label_train[inds][:6562]
     
     img_train = img_train * 255
     img_test = img_test * 255
     img_train = img_train.reshape((img_train.shape[0], 28, 28, 1))
     img_test = img_test.reshape((img_test.shape[0], 28, 28, 1))
 
-    #### test this part!!!
     img_train = np.pad(img_train,((0,0),(2,2),(2,2),(0,0))) #padding to make images 32x32 and not 28x28
     img_test = np.pad(img_test,((0,0),(2,2),(2,2),(0,0))) 
     
@@ -48,9 +45,7 @@ def load_usps():
     img_test=np.concatenate((img_test,img_test,img_test),axis=3) 
     print("---------------Load USPS----------------")
     print('Training set', img_train.shape, label_train.shape)
-    #print('Validation set', x_val.shape, y_val.shape)
+
     print('Test set', img_test.shape, label_test.shape)
     print("\n")
     return img_train, label_train, img_test, label_test
-
-#img_train, label_train, img_test, label_test = load_usps()

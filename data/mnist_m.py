@@ -1,6 +1,9 @@
+import pandas as pd
+import numpy as np
 def load_mnistm(y_train,y_test): ## take in labels from MNIST as they are the same
-    import pandas as pd
-    import numpy as np
+    """
+    Loads the mnist-m data from a .pkl file
+    """
 
 
     M = pd.read_pickle('mnistm_data.pkl')

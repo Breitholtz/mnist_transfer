@@ -3,34 +3,28 @@ import numpy as np
 import collections
 
 def tf_load_image(filename):
+    """
+    Load in image so we can handle it
+    """
     image_string = tf.io.read_file(filename)
     image = tf.image.decode_jpeg(image_string, channels=3)
     image=tf.cast(image, tf.float32)
     return image
 def tf_read_and_resize_image(filename,img_size):
-    ### takes file path and image size and resizes the image
+    """
+    takes file path and image size and resizes the image
+    """
     image_string = tf.io.read_file(filename)
     image = tf.image.decode_jpeg(image_string, channels=3)
     image=tf.cast(image, tf.float32)
     image = tf.image.resize(image, (img_size, img_size))#, method=tf.image.ResizeMethod.BILINEAR)
     return image
-def binarize(y,x):
-    ## take in one hot label encoding and make it into either 'label x' or 'not label x'
-    ## x is in [0,5] as we have at least 6 overlapping labels in our chestxray data
-    ## labeldict={"No Finding":0,"Cardiomegaly":1,"Edema":2,"Consolidation":3,"Atelectasis":4,"Effusion":5}
-    y_new=[]
-    mask=np.zeros(6)
-    mask[x]=1
-    for i in y:
-        if np.dot(i,mask)==1:
-            ## we have the label
-            y_new.append([0,1])
-        else:
-            ## we do not have the label
-            y_new.append([1,0])
-    return np.array(y_new)
+
 def load_resize_and_save(chexpert=False,img_size=32):
-##### loads the xray datasets from the raw images and then resizes to desired size and saves them in a new directory
+    """
+    loads the xray datasets from the raw images and then resizes to desired size and saves them in a new directory
+    """
+
     if chexpert:
         data_path="/home/adam/Code/Datasets/chexpert/"
         _DATA_DIR = "/home/adam/Code/Datasets/chexpert/CheXpert-v1.0-small" ### where is the source data?
@@ -49,7 +43,8 @@ def load_resize_and_save(chexpert=False,img_size=32):
         new_path=data_path+"resized"+str(img_size)+"chex"
 #         if not os.path.exists(new_path):
 #             os.makedirs(new_path)
-        ## load in, resize and save image in array file
+        
+        ### checks if the filename has a jpg or not and saves it to the new folder
         for file in filenames:
             img=np.array(tf_read_and_resize_image(file,img_size))
             
@@ -64,7 +59,6 @@ def load_resize_and_save(chexpert=False,img_size=32):
                 
             output_path=new_path+path
             
-            #print(output_path)
             tf.keras.preprocessing.image.save_img(output_path,img)
             
         #np.save("/home/adam/Code/Datasets/chexpert/chexpert128.npy",np.array([np.array(tf_read_and_resize_image(file)) for file in filenames]))
@@ -82,6 +76,9 @@ def load_resize_and_save(chexpert=False,img_size=32):
 
 
 def load_to_array(chexpert=False,img_size=32):
+    """
+    loads data from the initial csv's and images into 
+    """
     if chexpert:
         data_path="/home/adam/Code/Datasets/chexpert/"
         _DATA_DIR = "/home/adam/Code/Datasets/chexpert/CheXpert-v1.0-small" 
@@ -97,9 +94,7 @@ def load_to_array(chexpert=False,img_size=32):
         filenames.extend(filenames_2)
         arr=[]
         labels.extend(labels_2)
-        #for file in filenames:
-            #print(np.array(tf_load_image(file)))
-            #sys.exit(-1)
+
         arr= np.array([np.array(tf_load_image(img)) for img in filenames])
         np.save(data_path+"chexpert_"+str(img_size)+".npy",arr)
         np.save(data_path+"chexpert_"+str(img_size)+"_labels.npy",labels)
@@ -187,9 +182,12 @@ def load_from_csv2(imgs_path,csv_path,resized=False):
             #print(name)
             
             arr.append(os.path.join(imgs_path, name))
-        return arr,label_arr    
+        return arr,label_arr
+    
 def make_xray14_labels():
-    ##### load the labels and convert the labels to binary vectors which maps the occurrence of a label to a 1
+    """
+    load the labels of chestXray14 and convert the labels to binary vectors which maps the occurrence of a label to a 1
+    """
     data_path="/home/adam/Code/Datasets/chestXray14/"
     labeldict={"No Finding":0,"Cardiomegaly":1,"Edema":2,"Consolidation":3,"Atelectasis":4,"Effusion":5}
     data = pd.read_csv(data_path+"Data_Entry_2017_v2020.csv")
@@ -215,6 +213,5 @@ def make_xray14_labels():
         return result.astype(int)
 
     sample['Finding_Labels'] = sample['Finding_Labels'].apply(lambda x: make_one_hot(x))
-    #print(sample['Finding_Labels'].shape)
     y=sample['Finding_Labels']
     return np.array(y)

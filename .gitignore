@@ -4,3 +4,14 @@ __pycache__/
 
 # notebook checkpoints
 .ipynb_checkpoints/
+
+# specific directories created by running experiments
+logs/
+posteriors/
+priors/
+results/
+
+# data formats which we do not want to track
+*.npy
+*.pkl
+*.h5
