@@ -196,7 +196,10 @@ def load_task(task=2,binary=True,img_size=32):
         ## print amount of each labels in the dataset
         #print(np.sum(y_chex,axis=0))
         #print(np.sum(y_chest,axis=0))
-        #sys.exit(-1)
+        #         print(y_chest[0])
+        #         print(y_chex[53])
+        #         sys.exit(-1)
+        
         
         ## two datasets of different lengths, want to induce domain imbalance between source and target, 
         ## we do 20% of samples from each label in chestxray14 is added to chexpert to create the source, rest is target, i.e. 

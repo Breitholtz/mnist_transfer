@@ -49,7 +49,7 @@ if __name__ == '__main__':
     else:
         x_bound, x_prior, y_bound, y_prior = train_test_split(x_source, y_source, test_size=alpha, random_state=seed)
         w_a=train_prior(alpha,1,x_prior,y_prior,x_target=x_target,y_target=y_target,
-                        save=True,task=task,binary=binary,batch_size=128,architecture=architecture)
+                        save=True,task=task,binary=binary,batch_size=128,architecture=architecture,seed=seed)
         
     print('\n'+'-'*40)
     """
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     print('Training posterior with alpha=%f, epsilon=%f ...' % (alpha, epsilon))
     print('-'*40 + '\n')
     w_s=train_posterior(alpha,x_source,y_source,None,x_test=x_source,y_test=y_source,
-                        save=True,epsilon=epsilon,task=task,binary=binary,batch_size=128,architecture=architecture)
+                        save=True,epsilon=epsilon,task=task,binary=binary,batch_size=128,architecture=architecture,seed=seed)
 
     print('Done.')
     print('-'*40 + '\n')

@@ -130,9 +130,9 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     
     ### load the prior weights if there are any
     if(binary and alpha != 0):
-        prior_path=project_folder+"priors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        prior_path=project_folder+"priors/"+"task"+str(task)+"/Binary/"+str(architecture)+"/"+str(int(100*alpha))+"_"+str(seed)+"/prior.ckpt"
     elif(alpha != 0):
-        prior_path=project_folder+"priors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(100*alpha))+"/prior.ckpt"
+        prior_path=project_folder+"priors/"+"task"+str(task)+"/"+str(architecture)+"/"+str(int(100*alpha))+"_"+str(seed)+"/prior.ckpt"
         
     print('Loading weights...')
     if alpha==0 or prior_path is None:
@@ -150,7 +150,7 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     ## do X draws of the posterior, for two separate classifiers
     sigma_tmp=sigma
     sigma=sigma[0]*10**(-1*sigma[1])
-    e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std=draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,posterior_model)
+    e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_error, target_error, error_std, target_error_std=draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound,x_target,y_target,posterior_model)
 
 
     """
@@ -169,13 +169,13 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
     Finish up and store results
     """
     
-    # Checkpoint corresponds to either update or epoch depending on first part 1_ or 2_ """
+    # Checkpoint corresponds to either a weight_update or epoch depending on first part 1_ or 2_ """
     checkpoint = os.path.splitext(os.path.basename(posterior_path))[0]
     
-    updates = []
+    weight_updates = []
     
     if checkpoint[0:2]=="1_":
-            updates = int(checkpoint[2:])
+            weight_updates = int(checkpoint[2:])
     else: 
         #l=len(x_bound)
         if task==2:
@@ -188,13 +188,13 @@ def compute_bound_parts(task, posterior_path, x_bound, y_bound, x_target, y_targ
         #batch_num=np.ceil(l/batch_size) 
         #print(batch_num)
         #print(updates)
-        updates = (int(checkpoint[2:])+1)*batch_num # constant hack fix untested @TODO: really should fix this !!!
+        weight_updates = (int(checkpoint[2:])+1)*batch_num # constant hack fix untested @TODO: really should fix this !!!
         #print(updates)
         
     results=pd.DataFrame({
-        'Weightupdates': [updates],
-        'train_germain': [train_germain],
-        'target_germain': [target_germain],
+        'weight_updates': [weight_updates],
+        'train_error': [train_error],
+        'target_error': [target_error],
         'KL': [KL],
         'e_s': [e_s],
         'e_t': [e_t],
@@ -279,8 +279,8 @@ def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound
 
         
     # Errors
-    train_germain = np.mean(errorsum) 
-    target_germain = np.mean(target_errorsum)  
+    train_error = np.mean(errorsum) 
+    target_error = np.mean(target_errorsum)  
     error_std = np.std(errorsum)
     target_error_std = np.std(target_errorsum)
     # Means
@@ -294,10 +294,10 @@ def draw_classifier_and_calculate_errors(w_s,sigma,n_classifiers,x_bound,y_bound
     d_sx_std = np.std(d_sxsum)
     e_t_std = np.std(e_tsum)
     d_tx_std = np.std(d_txsum)
-    return e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_germain, target_germain, error_std, target_error_std
+    return e_s, e_t, d_sx, d_tx, e_s_std, e_t_std, d_sx_std, d_tx_std, train_error, target_error, error_std, target_error_std
 
     
-def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,beta_bound=False,beta_inf=1):
+def grid_search(train_error,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,beta_bound=False,beta_inf=1):
     #### here we want to do a coarse grid search over a and omega to get the smallest bound 
     print("Starting gridsearch....")
     avec=[0.001,0.005,0.01,0.05,0.1,0.5,1,5,10,50,100,500,1000,5000,10000,50000,100000]
@@ -314,7 +314,7 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,beta_bound=F
             if beta_bound:
                 germain_bound, boundparts=calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,beta_inf)
             else:
-                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m)
+                germain_bound, a1,a2,a3,a4,a5 =calculate_germain_bound(train_error,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m)
                 boundparts=[a1,a2,a3,a4,a5]
             if min(germain_bound)<tmp:
                 tmp=min(germain_bound)
@@ -338,7 +338,7 @@ def grid_search(train_germain,e_s,e_t,d_tx,d_sx,KL,delta,m,m_target,beta_bound=F
             if beta_bound:
                 germain_bound, boundparts = calculate_beta_bound(e_s,d_tx,KL,delta_p,a,omega,m,m_target,beta_inf)
             else:
-                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_germain,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m)
+                germain_bound, a1,a2,a3,a4,a5 = calculate_germain_bound(train_error,e_s,e_t,d_tx,d_sx,KL,delta_p,a,omega,m)
                 boundparts=[a1,a2,a3,a4,a5]
                 
             if min(germain_bound)<tmp:

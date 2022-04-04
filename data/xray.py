@@ -41,9 +41,6 @@ def load_resize_and_save(chexpert=False,img_size=32):
         labels.extend(labels_2)
      
         new_path=data_path+"resized"+str(img_size)+"chex"
-#         if not os.path.exists(new_path):
-#             os.makedirs(new_path)
-        
         ### checks if the filename has a jpg or not and saves it to the new folder
         for file in filenames:
             img=np.array(tf_read_and_resize_image(file,img_size))
@@ -52,28 +49,21 @@ def load_resize_and_save(chexpert=False,img_size=32):
             path=""
             for a in A:
                 if a[-4:]==".jpg":
-                    if not os.path.exists(new_path+path):
-                        os.makedirs(new_path+path)
+                    os.makedirs(new_path+path, exist_ok=True)
                     
                 path+="/"+a
                 
             output_path=new_path+path
             
             tf.keras.preprocessing.image.save_img(output_path,img)
-            
-        #np.save("/home/adam/Code/Datasets/chexpert/chexpert128.npy",np.array([np.array(tf_read_and_resize_image(file)) for file in filenames]))
-        #np.save("/home/adam/Code/Datasets/chexpert/labels.npy",np.array(labels)) # save labels to separate file
     else:
         data_path="/home/adam/Code/Datasets/chestXray14/"
-            os.makedirs(new_path)
+        #os.makedirs(new_path, exist_ok=True) # what is this for?? where is it defined?
 
         dirs = [l for l in os.listdir(data_path+"images/") if l != '.DS_Store']
         for file in dirs:
             img=np.array(tf_read_and_resize_image(data_path+"images/"+file,img_size))
-            #print(img)
             tf.keras.preprocessing.image.save_img(new_path+"/"+file,img)
-
-
 
 def load_to_array(chexpert=False,img_size=32):
     """

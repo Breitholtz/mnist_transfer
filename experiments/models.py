@@ -90,66 +90,68 @@ def init_svhn_model(binary):
     
     return model
 
+# ### regularizer toward some prior weights
+@tf.keras.utils.register_keras_serializable(package='Custom', name='l2-prior')
+class l2_prior_reg(tf.keras.regularizers.Regularizer):
+  def __init__(self, l2=0.001,prior_weight_matrix=None):
+    self.l2 = l2
+    self.prior_weights=prior_weight_matrix
 
-def init_mnist_model(binary):
+  def __call__(self, x):
+    prior=tf.convert_to_tensor(self.prior_weights)
+    print("prior is: ",prior.shape)
+    print("weights are: ",x.shape)
+    return self.l2 * tf.math.reduce_sum(tf.math.square(x-prior))
+  def get_config(self):
+    return {'l2': float(self.l2), 'prior_weight_matrix': self.prior_weights}
+    
+    
+    
+
+####### @TODO: Should fix this to be done in a loop in the program instead of manually like this    
+def init_mnist_model(binary,prior_weights=None):
     """
     LeNet-5 type model 
     """
-    model = Sequential()
-    model.add(Conv2D(32,(5,5),strides=(1,1), activation='relu',input_shape=(32,32,3))) ## 6 5x5 conv kernels
-    model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
-    model.add(Conv2D(48,(5,5),strides=(1,1), activation='relu')) ## 16 5x5 conv kernels
-    model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
-    model.add(Dense(100, activation='relu'))
-    if binary:
-        model.add(Dense(2, activation='softmax')) # output layer
+    if prior_weights==None:
+        model = Sequential()
+        model.add(Conv2D(32,(5,5),strides=(1,1), activation='relu',input_shape=(32,32,3))) ## 6 5x5 conv kernels
+        model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
+        model.add(Conv2D(48,(5,5),strides=(1,1), activation='relu')) ## 16 5x5 conv kernels
+        model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(100, activation='relu'))
+        model.add(Dense(100, activation='relu'))
+        if binary:
+            model.add(Dense(2, activation='softmax')) # output layer
+        else:
+            model.add(Dense(10, activation='softmax')) # output layer
     else:
-        model.add(Dense(10, activation='softmax')) # output layer
+        model = Sequential()
+        model.add(Conv2D(32,(5,5),strides=(1,1), activation='relu',input_shape=(32,32,3),kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[0]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[1]))) ## 6 5x5 conv kernels
+        model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
+        model.add(Conv2D(48,(5,5),strides=(1,1), activation='relu',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[2]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[3]))) ## 16 5x5 conv kernels
+        model.add(AveragePooling2D(pool_size=(3, 3),strides=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(100, activation='relu',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[4]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[5])))
+        model.add(Dense(100, activation='relu',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[6]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[7])))
+        if binary:
+            model.add(Dense(2, activation='softmax',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[8]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[9]))) # output layer
+        else:
+            model.add(Dense(10, activation='softmax',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[8]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[9]))) # output layer
     return model
 
-def init_task_model(TASK=2,binary=True,arch="lenet"): 
+def init_task_model(task=2,binary=True,arch="lenet",prior_weights=None): 
     """
      Function that takes in the task number and architecture
      
      It returns the model which fits the task
     """
+    
     if arch not in ["lr","lenet","fc","resnet"]:
         raise Exception('Architecture '+arch+' not implemented/tested')
-    if TASK==1 or TASK==2 or TASK==3 or TASK==4:
-        #### MNIST label shift (1) and mix of MNIST and MNIST-M (2)
-        if arch=="lr":
-            model=init_lr_model(binary)
-        elif arch=="lenet":
-            model=init_mnist_model(binary)
-        elif arch=="fc":
-            model=init_fc_model(binary)
-        else:
-            model=init_resnet_model(binary)
-    elif TASK==5:
-        
-        #### MNIST -> SVHN
-        if arch=="lr":
-            model=init_lr_model(binary)
-        elif arch=="lenet":
-            model=init_mnist_model(binary)
-        elif arch=="fc":
-            model=init_fc_model(binary)
-        else:
-            model=init_resnet_model(binary)
-    elif TASK==6:
-        #### CheXpert + chestxray14 mix
-        if arch=="lr":
-            model=init_lr_model(binary)
-        elif arch=="lenet":
-            model=init_mnist_model(binary)
-        elif arch=="fc":
-            model=init_fc_model(binary)
-        else:
-            model=init_resnet_model(binary)
-    elif TASK==7:
-        #### CheXpert -> chestxray14
+    if prior_weights==None:
+        ## Load the model w/o regularization
         if arch=="lr":
             model=init_lr_model(binary)
         elif arch=="lenet":
@@ -159,5 +161,13 @@ def init_task_model(TASK=2,binary=True,arch="lenet"):
         else:
             model=init_resnet_model(binary)
     else:
-        raise Exception('Task '+str(TASK)+' not implemented/tested')
+        ## Load the model w/ regularization
+        if arch=="lr":
+            model=init_lr_model(binary)
+        elif arch=="lenet":
+            model=init_mnist_model(binary,prior_weights)
+        elif arch=="fc":
+            model=init_fc_model(binary)
+        else:
+            model=init_resnet_model(binary)
     return model
