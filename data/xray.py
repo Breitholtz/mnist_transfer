@@ -1,7 +1,8 @@
 import tensorflow as tf
 import numpy as np
 import collections
-
+import pandas as pd
+import os,sys
 def tf_load_image(filename):
     """
     Load in image so we can handle it
@@ -144,7 +145,7 @@ def load_from_csv2(imgs_path,csv_path,resized=False):
             "0.0": "negative",
             "": "unmentioned",
         })
-    labeldict={"positive":1,"negative":0, "unmentioned":0,"uncertain":0} ### sets all uncertain labels to 1
+    labeldict={"positive":1,"negative":0, "unmentioned":0,"uncertain":0} ### sets all uncertain labels to 0
     overlapping_labels=[0,2,5,6,8,10] ## according to pham et al. NF,CM,ED,CD,AC,PE
     ##### loads chexpert filenames and labels from files
     label_arr=[]
@@ -159,12 +160,12 @@ def load_from_csv2(imgs_path,csv_path,resized=False):
             name = row["Path"]
             labels = [_LABELS[row[key]] for key in label_keys]
             labels_overlap=[labeldict[labels[i]] for i in overlapping_labels]
-            if resized:
-                A=name.split('/')[1:]
-                path="resized32chex"
-                for a in A:
-                    path+="/"+a
-                name=path
+#             if resized:
+#                 A=name.split('/')[1:]
+#                 path="resized32chex"
+#                 for a in A:
+#                     path+="/"+a
+#                 name=path
                 
                     
             ## save the image_name and the label array
@@ -173,15 +174,51 @@ def load_from_csv2(imgs_path,csv_path,resized=False):
             
             arr.append(os.path.join(imgs_path, name))
         return arr,label_arr
+
     
-def make_xray14_labels():
+    
+def make_chexpert_labels(data_path="/home/adam/Code/Datasets/chexpert/"):
+
+    def make_chex_onehot(row):
+        _LABELS = collections.OrderedDict({
+            "-1.0": 0, # uncertain
+            "1.0": 1,  # positive
+            "0.0": 0,  # negative
+            "nan": 0,  # unmentioned
+        }) ### sets all uncertain labels to 0, pass as policy parameter?
+        label_keys=["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Pleural Effusion"]
+        ## according to pham et al. NF,CM,ED,CD,AC,PE are the overlapping labels
+        labels = [_LABELS[str(row[key])] for key in label_keys]
+        if labels==[0,0,0,0,0,0]:
+            labels=[1,0,0,0,0,0]
+        return labels
+    
+    ##### loads chexpert filenames and labels from files
+
+    sample=pd.read_csv(data_path+"CheXpert-v1.0-small/train.csv")
+    sample["Path"]=data_path+sample["Path"]
+    sample["Finding_Labels"]=sample.apply(lambda row : make_chex_onehot(row), axis = 1)
+    
+    sample2=pd.read_csv(data_path+"CheXpert-v1.0-small/valid.csv")
+    sample2["Path"]=data_path+sample2["Path"]
+    sample2["Finding_Labels"]=sample2.apply(lambda row : make_chex_onehot(row), axis = 1)
+    #print(sample["Path"])
+    #print(sample2["Path"])
+    ### merge train and validation samples and return
+    sample=pd.concat([sample,sample2])
+    
+    #print(sample["Path"].isna().sum())
+    
+    return sample, np.array(sample["Finding_Labels"])
+    
+def make_xray14_labels(data_path="/home/adam/Code/Datasets/chestXray14/"):
     """
     load the labels of chestXray14 and convert the labels to binary vectors which maps the occurrence of a label to a 1
     """
-    data_path="/home/adam/Code/Datasets/chestXray14/"
     labeldict={"No Finding":0,"Cardiomegaly":1,"Edema":2,"Consolidation":3,"Atelectasis":4,"Effusion":5}
     data = pd.read_csv(data_path+"Data_Entry_2017_v2020.csv")
-    sample = os.listdir(data_path+"resized32/")
+    
+    sample = os.listdir(data_path+"images/")
 
     sample = pd.DataFrame({'Image Index': sample})
 
@@ -192,6 +229,8 @@ def make_xray14_labels():
                       'Original_Image_Width', 'Original_Image_Height',
                       'Original_Image_Pixel_Spacing_X',
                       'Original_Image_Pixel_Spacing_Y']#, 'Unnamed']
+    sample['Image_Index']=data_path+"images/"+sample['Image_Index']
+    sample["Path"]= sample['Image_Index']
     def make_one_hot(label_string):
         result=np.zeros(6)
         labels=label_string.split('|')
@@ -204,4 +243,4 @@ def make_xray14_labels():
 
     sample['Finding_Labels'] = sample['Finding_Labels'].apply(lambda x: make_one_hot(x))
     y=sample['Finding_Labels']
-    return np.array(y)
+    return sample, np.array(y)
