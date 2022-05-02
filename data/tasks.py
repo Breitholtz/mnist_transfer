@@ -1,12 +1,16 @@
-
+import os
 
 import numpy as np
 import sys
+import pandas as pd
 from data import mnist_m as mnistm
 from data import mnist
 from data import svhn
 from data import usps
+from data import xray
 from data.label_shift import label_shift_linear, plot_splitbars, label_shift
+import tensorflow.keras as keras
+from data.loader import CheXpertDataGenerator
 
 def binarize(y,x,num_labels=6):
     """
@@ -250,46 +254,71 @@ def load_task(task=2,binary=True,img_size=32):
 
     elif task==7:
         ###########################################################################
-        # chexpert -> chestxray14 
+        # chexpert + chestxray14 with dataloader
         ###########################################################################
-        data_path="/cephyr/users/adambre/Alvis/mnist_transfer/"
-        x_chest=np.load(data_path+"chestxray14_"+str(img_size)+".npy",allow_pickle=True)
-        y_chest=np.load(data_path+"chestxray14_"+str(img_size)+"_labels.npy",allow_pickle=True)
-
-        x_chex=np.load(data_path+"chexpert_"+str(img_size)+".npy",allow_pickle=True)
-        y_chex=np.load(data_path+"chexpert_"+str(img_size)+"_labels.npy",allow_pickle=True)
-
-        ### Binarize labels
-
-        y1=binarize(y_chest,2)
-        y2=binarize(y_chex,2)
-
-
-        ### do standard scaling
-        x_chest = x_chest.astype('float32')
-        sigma=np.std(x_chest)
-        x_chest /=sigma
-
-        x_chex = x_chex.astype('float32')
-        sigma2=np.std(x_chex)
-        x_chex /=sigma
-        ## mean subtraction
-        mu=np.mean(x_chest)
-        x_chest -= mu
-
-        mu2=np.mean(x_chex)
-        x_chex -= mu
-
-        print('mean, variance', mu, sigma)
-        print("---------------Load ChestXray14----------------")
-        print(x_chest.shape, y_chest.shape)
-        print('mean, variance', mu2, sigma2)
-        print("---------------Load CheXpert----------------")
-        print(x_chex.shape, y_chex.shape)
-        x_source=x_chex
-        y_source=y2
-        x_target=x_chest
-        y_target=y1
+        from sklearn.model_selection import train_test_split
+        batch_size=64
+        data_path="/home/users/adam/Code/Datasets/"
+        chest_image_source_dir="/home/adam/Code/Datasets/chestXray14/"
+        chex_image_source_dir="/home/adam/Code/Datasets/chexpert/CheXpert-v1.0-small/"
+        output_dir="/home/adam/Code"
+        class_names= ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]
+        
+        ### load and print csv files
+        
+        
+        
+        
+        # chexpert csv files
+        train_file = os.path.join(chex_image_source_dir, 'train.csv')
+        valid_file = os.path.join(chex_image_source_dir, 'valid.csv')
+        chest_file = os.path.join(chest_image_source_dir, 'Data_Entry_2017_v2020.csv')
+        data = pd.read_csv(train_file)
+        data_v = pd.read_csv(train_file)
+        data2=pd.read_csv(chest_file)
+#         print(data.head())
+#         print(data2.head())
+        
+        #### fix the labels and such to be on desired form
+        chest_data, _ =xray.make_xray14_labels()
+        chest_data=chest_data.sort_values(by=["Patient_ID","Follow_Up_#"])
+        #print("-"*40)
+        #print(chest_data.head())
+        
+        
+        chex_data, _=xray.make_chexpert_labels()
+        #print("-"*40)
+        #print(chex_data.head())
+        
+        #### do split to source and target 
+        y_chex = chex_data["Finding_Labels"]
+        y_chest = chest_data["Finding_Labels"]
+        x_chex = chex_data#.drop("Finding_Labels", axis=1)
+        x_chest = chest_data#.drop("Finding_Labels", axis=1)
+        
+        x_shift, x_shift_target,y_shift, y_shift_target = train_test_split(x_chest,y_chest,test_size=0.2)
+#         print("--"*30)
+#         print(x_shift_target)
+#         print(x_chest)
+#         print("--"*30)
+#         sys.exit(-1)
+        # X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=random_state)
+        y_source=pd.concat([y_shift_target,y_chex])
+        x_source=pd.concat([x_shift_target,x_chex])
+        y_target=y_shift
+        x_target=x_shift
+        
+        
+        #### return dataloader
+        source_data_loader= CheXpertDataGenerator(dataset_df=x_source, y=y_source,
+            batch_size=batch_size,
+            target_size=(img_size, img_size),
+                   )
+        
+        target_data_loader= CheXpertDataGenerator(dataset_df=x_target,y=y_target,
+            batch_size=batch_size,
+            target_size=(img_size, img_size),
+                    )
     else: 
         raise Exception('Task '+str(task)+' does not exist')
      
@@ -300,17 +329,21 @@ def load_task(task=2,binary=True,img_size=32):
         else:
             y_source=make_mnist_binary(y_source)
             y_target=make_mnist_binary(y_target)
-    #####################################################################################################################
-    # Shuffle the data with some seed before returning it. 
-    # This is done to mitigate data being in too specific an order, i.e. mixes being one dataset after the other etc.
-    #####################################################################################################################
-    np.random.seed()
-    L=len(y_source)
-    source_indices=np.random.permutation(L)
-    L2=len(y_target)
-    target_indices=np.random.permutation(L2)
-    x_source=x_source[source_indices]
+
     
-    x_target=x_target[target_indices]
-  
-    return x_source, np.array(y_source)[source_indices], x_target, np.array(y_target)[target_indices]
+    if task==7:
+        return source_data_loader,target_data_loader
+    else:
+               #####################################################################################################################
+        # Shuffle the data with some seed before returning it. 
+        # This is done to mitigate data being in too specific an order, i.e. mixes being one dataset after the other etc.
+        #####################################################################################################################
+        np.random.seed()
+        L=len(y_source)
+        source_indices=np.random.permutation(L)
+        L2=len(y_target)
+        target_indices=np.random.permutation(L2)
+        x_source=x_source[source_indices]
+
+        x_target=x_target[target_indices]
+        return x_source, np.array(y_source)[source_indices], x_target, np.array(y_target)[target_indices]
