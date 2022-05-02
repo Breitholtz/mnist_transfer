@@ -7,7 +7,7 @@ from data import mnist
 from data import svhn
 from data import usps
 from data.label_shift import label_shift_linear, plot_splitbars, label_shift
-
+#from data.loader import *
 def binarize(y,x,num_labels=6):
     """
      take in one hot label encoding and make it into either 'label x' or 'not label x'
@@ -38,12 +38,12 @@ def make_mnist_binary(y):
         else:
             new_y[label]=[0, 1]
     return new_y
-def load_task(task=2,binary=True,img_size=32):
+def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
     """
     loads the data needed for the specific task
     """
     if task == 1 or task == 2:
-        x_train, y_train, x_test, y_test = mnist.load_mnist()
+        x_train, y_train, x_test, y_test = mnist.load_mnist(task)
         
         
         ###### Add train and test together 
@@ -104,7 +104,7 @@ def load_task(task=2,binary=True,img_size=32):
         # MNIST -> MNIST-M
         ###########################################################################
         
-        x_train, y_train, x_test, y_test = mnist.load_mnist()
+        x_train, y_train, x_test, y_test = mnist.load_mnist(task)
         x_train_m, y_train_m, x_test_m, y_test_m = mnistm.load_mnistm(y_train,y_test)
         
         ###### Add train and test together 
@@ -126,7 +126,7 @@ def load_task(task=2,binary=True,img_size=32):
         ###########################################################################
         # MNIST -> USPS
         ###########################################################################
-        x_train, y_train, x_test, y_test = mnist.load_mnist()
+        x_train, y_train, x_test, y_test = mnist.load_mnist(task)
         x_train_usps, y_train_usps, x_test_usps, y_test_usps = usps.load_usps()
         
         ###### Add train and test together 
@@ -147,7 +147,7 @@ def load_task(task=2,binary=True,img_size=32):
         # MNIST -> SVHN
         ###########################################################################
         
-        x_train, y_train, x_test, y_test = mnist.load_mnist()
+        x_train, y_train, x_test, y_test = mnist.load_mnist(task)
         x_train_svhn, y_train_svhn, x_test_svhn, y_test_svhn = svhn.load_svhn()
         
         ###### Add train and test together 
@@ -250,46 +250,49 @@ def load_task(task=2,binary=True,img_size=32):
 
     elif task==7:
         ###########################################################################
-        # chexpert -> chestxray14 
+        # chexpert + chestxray14 mix with dataloader instead
         ###########################################################################
-        data_path="/cephyr/users/adambre/Alvis/mnist_transfer/"
-        x_chest=np.load(data_path+"chestxray14_"+str(img_size)+".npy",allow_pickle=True)
-        y_chest=np.load(data_path+"chestxray14_"+str(img_size)+"_labels.npy",allow_pickle=True)
+        
+        data_path="/home/users/adam/Code/Datasets/"
+        
+#         data_path="/cephyr/users/adambre/Alvis/mnist_transfer/"
+#         x_chest=np.load(data_path+"chestxray14_"+str(img_size)+".npy",allow_pickle=True)
+#         y_chest=np.load(data_path+"chestxray14_"+str(img_size)+"_labels.npy",allow_pickle=True)
 
-        x_chex=np.load(data_path+"chexpert_"+str(img_size)+".npy",allow_pickle=True)
-        y_chex=np.load(data_path+"chexpert_"+str(img_size)+"_labels.npy",allow_pickle=True)
+#         x_chex=np.load(data_path+"chexpert_"+str(img_size)+".npy",allow_pickle=True)
+#         y_chex=np.load(data_path+"chexpert_"+str(img_size)+"_labels.npy",allow_pickle=True)
 
-        ### Binarize labels
+#         ### Binarize labels
 
-        y1=binarize(y_chest,2)
-        y2=binarize(y_chex,2)
+#         y1=binarize(y_chest,2)
+#         y2=binarize(y_chex,2)
 
 
-        ### do standard scaling
-        x_chest = x_chest.astype('float32')
-        sigma=np.std(x_chest)
-        x_chest /=sigma
+#         ### do standard scaling
+#         x_chest = x_chest.astype('float32')
+#         sigma=np.std(x_chest)
+#         x_chest /=sigma
 
-        x_chex = x_chex.astype('float32')
-        sigma2=np.std(x_chex)
-        x_chex /=sigma
-        ## mean subtraction
-        mu=np.mean(x_chest)
-        x_chest -= mu
+#         x_chex = x_chex.astype('float32')
+#         sigma2=np.std(x_chex)
+#         x_chex /=sigma
+#         ## mean subtraction
+#         mu=np.mean(x_chest)
+#         x_chest -= mu
 
-        mu2=np.mean(x_chex)
-        x_chex -= mu
+#         mu2=np.mean(x_chex)
+#         x_chex -= mu
 
-        print('mean, variance', mu, sigma)
-        print("---------------Load ChestXray14----------------")
-        print(x_chest.shape, y_chest.shape)
-        print('mean, variance', mu2, sigma2)
-        print("---------------Load CheXpert----------------")
-        print(x_chex.shape, y_chex.shape)
-        x_source=x_chex
-        y_source=y2
-        x_target=x_chest
-        y_target=y1
+#         print('mean, variance', mu, sigma)
+#         print("---------------Load ChestXray14----------------")
+#         print(x_chest.shape, y_chest.shape)
+#         print('mean, variance', mu2, sigma2)
+#         print("---------------Load CheXpert----------------")
+#         print(x_chex.shape, y_chex.shape)
+#         x_source=x_chex
+#         y_source=y2
+#         x_target=x_chest
+#         y_target=y1
     else: 
         raise Exception('Task '+str(task)+' does not exist')
      
@@ -312,5 +315,10 @@ def load_task(task=2,binary=True,img_size=32):
     x_source=x_source[source_indices]
     
     x_target=x_target[target_indices]
-  
+    
+    
+    
+#     if(architecture=='fc'):
+#         x_source = x_source.reshape(x_source.shape[0], img_size*img_size*3)
+#         x_target = x_target.reshape(x_target.shape[0], img_size*img_size*3)
     return x_source, np.array(y_source)[source_indices], x_target, np.array(y_target)[target_indices]
