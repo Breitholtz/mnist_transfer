@@ -9,13 +9,9 @@ from data import svhn
 from data import usps
 from data import xray
 from data.label_shift import label_shift_linear, plot_splitbars, label_shift
-<<<<<<< HEAD
-#from data.loader import *
-=======
 import tensorflow.keras as keras
 from data.loader import CheXpertDataGenerator
 
->>>>>>> 380905858fdca0e22efcb7326a0e3e4d0b638260
 def binarize(y,x,num_labels=6):
     """
      take in one hot label encoding and make it into either 'label x' or 'not label x'
@@ -262,11 +258,13 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         ###########################################################################
         from sklearn.model_selection import train_test_split
         batch_size=64
-        data_path="/home/users/adam/Code/Datasets/"
-        chest_image_source_dir="/home/adam/Code/Datasets/chestXray14/"
-        chex_image_source_dir="/home/adam/Code/Datasets/chexpert/CheXpert-v1.0-small/"
-        output_dir="/home/adam/Code"
-        class_names= ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]
+        #data_path="/home/users/adam/Code/Datasets/"
+        data_path="/cephyr/NOBACKUP/groups/snic2021-23-538/"
+        chest_image_source_dir=data_path+"chestXray14/"
+        chex_image_source_dir=data_path+"new_chexpert/"
+        
+#         output_dir="/home/adam/Code"
+#         class_names= ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]
         
         ### load and print csv files
         
@@ -274,23 +272,32 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         
         
         # chexpert csv files
-        train_file = os.path.join(chex_image_source_dir, 'train.csv')
-        valid_file = os.path.join(chex_image_source_dir, 'valid.csv')
-        chest_file = os.path.join(chest_image_source_dir, 'Data_Entry_2017_v2020.csv')
-        data = pd.read_csv(train_file)
-        data_v = pd.read_csv(train_file)
-        data2=pd.read_csv(chest_file)
+#         train_file = os.path.join(chex_image_source_dir, 'train.csv')
+#         valid_file = os.path.join(chex_image_source_dir, 'valid.csv')
+#         chest_file = os.path.join(chest_image_source_dir, 'Data_Entry_2017_v2020.csv')
+#         data = pd.read_csv(train_file)
+#         data_v = pd.read_csv(train_file)
+#         data2=pd.read_csv(chest_file)
+#         print(data2)
+#         for label in data2["Finding Labels"]:
+            
+    
+#             if isinstance(label,float):
+#                 print(label)
+#                 print(label.index)
+#         sys.exit(-1)
+        
 #         print(data.head())
 #         print(data2.head())
         
         #### fix the labels and such to be on desired form
-        chest_data, _ =xray.make_xray14_labels()
+        chest_data, _ =xray.make_xray14_labels(chest_image_source_dir)
         chest_data=chest_data.sort_values(by=["Patient_ID","Follow_Up_#"])
         #print("-"*40)
         #print(chest_data.head())
         
         
-        chex_data, _=xray.make_chexpert_labels()
+        chex_data, _=xray.make_chexpert_labels(chex_image_source_dir)
         #print("-"*40)
         #print(chex_data.head())
         

@@ -1,11 +1,15 @@
 import numpy as np
 import os
 import pandas as pd
+import tensorflow as tf
 from tensorflow.keras.utils import Sequence
+from tensorflow.image import resize
 from PIL import Image
-from skimage.transform import resize
+from data import tasks
+#from skimage.transform import resize
 
-source_image_dir="/home/users/adam/Code/Datasets/"
+#source_image_dir2="/home/users/adam/Code/Datasets/"
+source_image_dir="/cephyr/NOBACKUP/groups/snic2021-23-538/"
 class CheXpertDataGenerator(Sequence):
     'Data Generetor for CheXpert'
     
@@ -33,17 +37,19 @@ class CheXpertDataGenerator(Sequence):
     def __getitem__(self, idx):
         # print('idx....', idx)
         batch_x_path = self.x_path[idx * self.batch_size:(idx + 1) * self.batch_size]
-        batch_x = np.asarray([self.load_image(x_path) for x_path in batch_x_path])
+        batch_x = np.asarray([self.load_image(x_path) for x_path in batch_x_path]).astype(np.float32)
         batch_x = self.transform_batch_images(batch_x)
-        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-        return batch_x, batch_y
+        y=tasks.binarize(self.y,0) ### set no finding as the 1
+        batch_y = y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        #print(batch_y)
+        return (batch_x, batch_y)
 
     def load_image(self, image_file):
         image_path = os.path.join(self.source_image_dir, image_file)
         image = Image.open(image_path)
         image_array = np.asarray(image.convert("RGB"))
         image_array = image_array / 255.
-        image_array = resize(image_array, self.target_size)
+        image_array = tf.image.resize(image_array, self.target_size)
         return image_array
 
     def transform_batch_images(self, batch_x):
