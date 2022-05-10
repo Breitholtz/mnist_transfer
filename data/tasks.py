@@ -12,6 +12,7 @@ from data.label_shift import label_shift_linear, plot_splitbars, label_shift
 import tensorflow.keras as keras
 from data.loader import CheXpertDataGenerator
 
+
 def binarize(y,x,num_labels=6):
     """
      take in one hot label encoding and make it into either 'label x' or 'not label x'
@@ -265,7 +266,7 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         
 #         output_dir="/home/adam/Code"
 #         class_names= ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]
-        
+       
         ### load and print csv files
         
         
