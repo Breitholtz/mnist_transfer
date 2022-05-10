@@ -1,13 +1,15 @@
 import numpy as np
 import os
 import pandas as pd
+import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 from PIL import Image
 from skimage.transform import resize
-
+from data import tasks
 source_image_dir="/home/users/adam/Code/Datasets/"
+#source_image_dir="/cephyr/NOBACKUP/groups/snic2021-23-538/"
 class CheXpertDataGenerator(Sequence):
-    'Data Generetor for CheXpert'
+    'Data Generator for CheXpert and chestXray14'
     
     def __init__(self, dataset_df, y, batch_size=16,
                  target_size=(224, 224),  verbose=0,
@@ -21,22 +23,21 @@ class CheXpertDataGenerator(Sequence):
         self.shuffle = shuffle_on_epoch_end
         self.random_state = random_state
         self.x_path=dataset_df["Path"]
-        #self.class_names = class_names
-        #self.prepare_dataset()
         self.steps = int(np.ceil(len(self.x_path) / float(self.batch_size)))
     def __bool__(self):
         return True
 
     def __len__(self):
         return self.steps
-
     def __getitem__(self, idx):
         # print('idx....', idx)
         batch_x_path = self.x_path[idx * self.batch_size:(idx + 1) * self.batch_size]
-        batch_x = np.asarray([self.load_image(x_path) for x_path in batch_x_path])
+        batch_x = np.asarray([self.load_image(x_path) for x_path in batch_x_path]).astype(np.float32)
         batch_x = self.transform_batch_images(batch_x)
-        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-        return batch_x, batch_y
+        y=tasks.binarize(self.y,0) ### set no finding as the 1
+        batch_y = y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        #print(batch_y)
+        return (batch_x, batch_y)
 
     def load_image(self, image_file):
         image_path = os.path.join(self.source_image_dir, image_file)
@@ -70,4 +71,3 @@ class CheXpertDataGenerator(Sequence):
     def on_epoch_end(self):
         if self.shuffle:
             self.random_state += 1
-            self.prepare_dataset()

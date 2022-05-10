@@ -5,23 +5,31 @@ from tensorflow.keras.layers import Dense, Dropout, Flatten
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
 from tensorflow.keras.constraints import max_norm
 from tensorflow.keras.regularizers import l2
-
+from tensorflow.python.keras import Model
 import os
 
-def init_resnet_model(binary=True):
+def init_resnet_model(binary=True,task=2,image_size=124):
     from tensorflow.keras.applications.resnet_v2 import ResNet50V2
     import numpy as np
-    
-    #model = ResNet50(weights='imagenet',include_top=False)
-    if binary:
-        model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(32,32,3),classes=2)
+
+    if task==4:
+        base_model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(image_size,image_size,1),pooling='avg')
     else:
-        model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(32,32,3),classes=10)
-    model.add(Flatten())
+        base_model = ResNet50V2(weights='imagenet',include_top=False,input_shape=(image_size,image_size,3),pooling='avg')
+    # Freeze base model
+    base_model.trainable = False
+    x = base_model.output
+    #x = AveragePooling2D()(x)
+    # let's add a fully-connected layer
+    x = Dense(1024, activation='relu')(x)
+    # and a logistic layer
     if binary:
-        model.add(Dense(2, activation = 'softmax'))
+        predictions = Dense(2, activation='softmax')(x)
     else:
-        model.add(Dense(10, activation = 'softmax'))
+        predictions = Dense(10, activation='softmax')(x)
+
+    # this is the model we will train
+    model = Model(inputs=base_model.input, outputs=predictions)
     return model
 
 def init_fc_model(binary=True):
@@ -141,7 +149,7 @@ def init_mnist_model(binary,prior_weights=None):
             model.add(Dense(10, activation='softmax',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[8]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[9]))) # output layer
     return model
 
-def init_task_model(task=2,binary=True,arch="lenet",prior_weights=None): 
+def init_task_model(task=2,binary=True,arch="lenet",prior_weights=None,image_size=124): 
     """
      Function that takes in the task number and architecture
      
@@ -159,7 +167,7 @@ def init_task_model(task=2,binary=True,arch="lenet",prior_weights=None):
         elif arch=="fc":
             model=init_fc_model(binary)
         else:
-            model=init_resnet_model(binary)
+            model=init_resnet_model(binary,image_size=image_size)
     else:
         ## Load the model w/ regularization
         if arch=="lr":
@@ -169,5 +177,5 @@ def init_task_model(task=2,binary=True,arch="lenet",prior_weights=None):
         elif arch=="fc":
             model=init_fc_model(binary)
         else:
-            model=init_resnet_model(binary)
+            model=init_resnet_model(binary,image_size=image_size)
     return model

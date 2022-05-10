@@ -9,13 +9,11 @@ from data import svhn
 from data import usps
 from data import xray
 from data.label_shift import label_shift_linear, plot_splitbars, label_shift
-<<<<<<< HEAD
-#from data.loader import *
-=======
+
 import tensorflow.keras as keras
 from data.loader import CheXpertDataGenerator
 
->>>>>>> 380905858fdca0e22efcb7326a0e3e4d0b638260
+
 def binarize(y,x,num_labels=6):
     """
      take in one hot label encoding and make it into either 'label x' or 'not label x'
@@ -264,7 +262,7 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         batch_size=64
         data_path="/home/users/adam/Code/Datasets/"
         chest_image_source_dir="/home/adam/Code/Datasets/chestXray14/"
-        chex_image_source_dir="/home/adam/Code/Datasets/chexpert/CheXpert-v1.0-small/"
+        chex_image_source_dir="/home/adam/Code/Datasets/chexpert/new_chexpert/"#CheXpert-v1.0-small/"
         output_dir="/home/adam/Code"
         class_names= ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]
         
@@ -278,7 +276,7 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         valid_file = os.path.join(chex_image_source_dir, 'valid.csv')
         chest_file = os.path.join(chest_image_source_dir, 'Data_Entry_2017_v2020.csv')
         data = pd.read_csv(train_file)
-        data_v = pd.read_csv(train_file)
+        data_v = pd.read_csv(valid_file)
         data2=pd.read_csv(chest_file)
 #         print(data.head())
 #         print(data2.head())

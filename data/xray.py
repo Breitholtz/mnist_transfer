@@ -194,12 +194,13 @@ def make_chexpert_labels(data_path="/home/adam/Code/Datasets/chexpert/"):
         return labels
     
     ##### loads chexpert filenames and labels from files
-
-    sample=pd.read_csv(data_path+"CheXpert-v1.0-small/train.csv")
+    # CheXpert-v1.0-small/
+    
+    sample=pd.read_csv(data_path+"new_chexpert/train.csv")
     sample["Path"]=data_path+sample["Path"]
     sample["Finding_Labels"]=sample.apply(lambda row : make_chex_onehot(row), axis = 1)
     
-    sample2=pd.read_csv(data_path+"CheXpert-v1.0-small/valid.csv")
+    sample2=pd.read_csv(data_path+"new_chexpert/valid.csv")
     sample2["Path"]=data_path+sample2["Path"]
     sample2["Finding_Labels"]=sample2.apply(lambda row : make_chex_onehot(row), axis = 1)
     #print(sample["Path"])
@@ -207,7 +208,7 @@ def make_chexpert_labels(data_path="/home/adam/Code/Datasets/chexpert/"):
     ### merge train and validation samples and return
     sample=pd.concat([sample,sample2])
     
-    #print(sample["Path"].isna().sum())
+    #print(sample["Finding_Labels"].isna().sum())
     
     return sample, np.array(sample["Finding_Labels"])
     
@@ -240,7 +241,7 @@ def make_xray14_labels(data_path="/home/adam/Code/Datasets/chestXray14/"):
             else:
                 result[labeldict[l]]=1
         return result.astype(int)
-
+    #print(sample["Finding_Labels"].isna().sum())
     sample['Finding_Labels'] = sample['Finding_Labels'].apply(lambda x: make_one_hot(x))
     y=sample['Finding_Labels']
     return sample, np.array(y)
