@@ -196,19 +196,16 @@ def make_chexpert_labels(data_path="/home/adam/Code/Datasets/chexpert/"):
     ##### loads chexpert filenames and labels from files
     # CheXpert-v1.0-small/
     
-    sample=pd.read_csv(data_path+"new_chexpert/train.csv")
+    sample=pd.read_csv(data_path+"new_chexpert/"+"train.csv")
     sample["Path"]=data_path+sample["Path"]
     sample["Finding_Labels"]=sample.apply(lambda row : make_chex_onehot(row), axis = 1)
     
-    sample2=pd.read_csv(data_path+"new_chexpert/valid.csv")
+    sample2=pd.read_csv(data_path+"new_chexpert/"+"valid.csv")
     sample2["Path"]=data_path+sample2["Path"]
     sample2["Finding_Labels"]=sample2.apply(lambda row : make_chex_onehot(row), axis = 1)
-    #print(sample["Path"])
-    #print(sample2["Path"])
     ### merge train and validation samples and return
     sample=pd.concat([sample,sample2])
     
-    #print(sample["Finding_Labels"].isna().sum())
     
     return sample, np.array(sample["Finding_Labels"])
     
@@ -232,23 +229,18 @@ def make_xray14_labels(data_path="/home/adam/Code/Datasets/chestXray14/"):
                       'Original_Image_Pixel_Spacing_Y']#, 'Unnamed']
     sample['Image_Index']=data_path+"images/"+sample['Image_Index']
     sample["Path"]= sample['Image_Index']
+    
     def make_one_hot(label_string):
         labeldict={"No Finding":0,"Cardiomegaly":1,"Edema":2,"Consolidation":3,"Atelectasis":4,"Effusion":5}
         result=np.zeros(6)
-        #print(label_string)
-        ## TODO: why does a nan creep in here on alvis???
-        if not isinstance(label_string,str):
-            print(label_string)
-        else:
-            labels=label_string.split('|')
-            for l in labels:
-                if l not in ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]:
-                    pass
-                else:
-                    result[labeldict[l]]=1
+        labels=label_string.split('|')
+        for l in labels:
+            if l not in ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]:
+                pass
+            else:
+                result[labeldict[l]]=1
         return result.astype(int)
 
-    #print(sample["Finding_Labels"].isna().sum())
     sample['Finding_Labels'] = sample['Finding_Labels'].apply(lambda x: make_one_hot(x))
     y=sample['Finding_Labels']
     return sample, np.array(y)

@@ -20,10 +20,6 @@ if [ -z "$sigma" ]
 then 
     sigma='3,3'
 fi
-if [ -z "$epsilon" ]
-then 
-    epsilon=0.01
-fi
 if [ -z "$delta" ]
 then 
     delta=0.05
@@ -52,7 +48,14 @@ if [ -z "$architecture" ]
 then 
     architecture='lenet'
 fi
-
+if [ -z "$image_size" ]
+then 
+    image_size=32
+fi
+if [ -z "$batch_size" ]
+then 
+    batch_size=128
+fi
 . load_modules.sh
 
-python batch_bound_single.py -t $task -r $seed -a $alpha -s $sigma -e $epsilon -d $delta -b $binary -n $nclassifiers -B $bound -p $prior -P $posterior -A $architecture
+python batch_bound_single.py -t $task -r $seed -a $alpha -s $sigma -d $delta -b $binary -n $nclassifiers -B $bound -p $prior -P $posterior -A $architecture -I $image_size -F $batch_size 

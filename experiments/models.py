@@ -149,13 +149,13 @@ def init_mnist_model(binary,prior_weights=None):
             model.add(Dense(10, activation='softmax',kernel_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[8]),bias_regularizer=l2_prior_reg(prior_weight_matrix=prior_weights[9]))) # output layer
     return model
 
-def init_task_model(task=2,binary=True,arch="lenet",prior_weights=None,image_size=124): 
+def init_task_model(task=2,binary=True,architecture="lenet",prior_weights=None,image_size=32): 
     """
      Function that takes in the task number and architecture
      
      It returns the model which fits the task
     """
-    
+    arch=architecture
     if arch not in ["lr","lenet","fc","resnet"]:
         raise Exception('Architecture '+arch+' not implemented/tested')
     if prior_weights==None:

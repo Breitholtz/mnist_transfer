@@ -7,16 +7,17 @@ from tensorflow.image import resize
 from PIL import Image
 from data import tasks
 #from skimage.transform import resize
-
+import time
 #source_image_dir2="/home/users/adam/Code/Datasets/"
 source_image_dir="/cephyr/NOBACKUP/groups/snic2021-23-538/"
 class CheXpertDataGenerator(Sequence):
     'Data Generator for CheXpert and chestXray14'
     
-    def __init__(self, dataset_df, y, batch_size=16,
+    def __init__(self, dataset_df, y, iw, batch_size=32,
                  target_size=(224, 224),  verbose=0,
                  shuffle_on_epoch_end=False, random_state=1):
         self.dataset_df = dataset_df
+        #y=tasks.binarize(y,0) ### set no_finding as the 1
         self.y=y
         self.source_image_dir = source_image_dir
         self.batch_size = batch_size
@@ -24,7 +25,9 @@ class CheXpertDataGenerator(Sequence):
         self.verbose = verbose
         self.shuffle = shuffle_on_epoch_end
         self.random_state = random_state
+        #print(dataset_df)
         self.x_path=dataset_df["Path"]
+        self.iw=np.array(iw)
         self.steps = int(np.ceil(len(self.x_path) / float(self.batch_size)))
     def __bool__(self):
         return True
@@ -33,19 +36,27 @@ class CheXpertDataGenerator(Sequence):
         return self.steps
     def __getitem__(self, idx):
         # print('idx....', idx)
+        
         batch_x_path = self.x_path[idx * self.batch_size:(idx + 1) * self.batch_size]
+        
         batch_x = np.asarray([self.load_image(x_path) for x_path in batch_x_path]).astype(np.float32)
-        batch_x = self.transform_batch_images(batch_x)
-        y=tasks.binarize(self.y,0) ### set no finding as the 1
-        batch_y = y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        
+        batch_x = self.transform_batch_images(batch_x)        
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        #batch_w = self.iw[idx * self.batch_size:(idx + 1) * self.batch_size]
         #print(batch_y)
-        return (batch_x, batch_y)
+        return batch_x, batch_y#, batch_w
 
     def load_image(self, image_file):
         image_path = os.path.join(self.source_image_dir, image_file)
-        image = Image.open(image_path)
-        image_array = np.asarray(image.convert("RGB"))
-        image_array = image_array / 255.
+        img = tf.io.read_file(image_path)
+        #img = Image.open(image_path)
+        img = tf.image.decode_jpeg(img, channels=3)
+        # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+        image_array = tf.image.convert_image_dtype(img, tf.float32)
+#         image = Image.open(image_path)
+#         image_array = np.asarray(image.convert("RGB"))
+#         image_array = image_array / 255.
         image_array = tf.image.resize(image_array, self.target_size)
         return image_array
 

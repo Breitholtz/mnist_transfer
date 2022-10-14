@@ -41,8 +41,11 @@ def load_usps():
     
     ## expand to (N,32,32,3) so that we can compare the two datasets
  
-    img_train=np.concatenate((img_train,img_train,img_train),axis=3)
-    img_test=np.concatenate((img_test,img_test,img_test),axis=3) 
+#     img_train=np.concatenate((img_train,img_train,img_train),axis=3)
+#     img_test=np.concatenate((img_test,img_test,img_test),axis=3) 
+    
+    
+    
     print("---------------Load USPS----------------")
     print('Training set', img_train.shape, label_train.shape)
 

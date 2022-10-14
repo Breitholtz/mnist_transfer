@@ -12,6 +12,9 @@ from data.label_shift import label_shift_linear, plot_splitbars, label_shift
 import tensorflow.keras as keras
 from data.loader import CheXpertDataGenerator
 
+iw_source=[]
+iw_target=[]
+
 
 def binarize(y,x,num_labels=6):
     """
@@ -19,6 +22,7 @@ def binarize(y,x,num_labels=6):
      x is in [0,5] as we have at least 6 overlapping labels in our chestxray data
      labeldict={"No Finding":0,"Cardiomegaly":1,"Edema":2,"Consolidation":3,"Atelectasis":4,"Effusion":5}
     """
+    #print(y)
     y_new=[]
     mask=np.zeros(num_labels)
     mask[x]=1
@@ -43,10 +47,11 @@ def make_mnist_binary(y):
         else:
             new_y[label]=[0, 1]
     return new_y
-def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
+def load_task(task=2,binary=True,image_size=32,architecture='lenet',alpha=0,seed=69105,batch_size=32):
     """
     loads the data needed for the specific task
     """
+    np.random.seed(seed)
     if task == 1 or task == 2:
         x_train, y_train, x_test, y_test = mnist.load_mnist(task)
         
@@ -79,7 +84,10 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
             ## shift the distributions to create source and target distributions
             x_shift_m, y_shift_m,x_shift_target_m, y_shift_target_m = \
         label_shift_linear(x_full_m,y_full_m,1/12,[0,1,2,3,4,5,6,7,8,9],decreasing=False)
+            
+            ###########################################
             ##### calculate the label densities here
+            ###########################################
             densities=[]
             
             #check that this yields correct estimations of the density
@@ -87,17 +95,61 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
             densities.append(np.sum(y_shift_m,axis=0))
             densities.append(np.sum(y_shift_target,axis=0))
             densities.append(np.sum(y_shift_target_m,axis=0))
-
+            
+            
+            print(densities)
             
             L=len(densities[0])
             interdomain_densities = [[] for x in range(2)]
             for i in range(L):
                 ## all densities are (#samples from mnist) over (#samples from mnist-m)
-                interdomain_densities[0].append(densities[0][i]/densities[1][i])
-                interdomain_densities[1].append(densities[2][i]/densities[3][i])
+                interdomain_densities[0].append(densities[1][i]/densities[0][i])
+                interdomain_densities[1].append(densities[3][i]/densities[2][i])
+                #interdomain_densities[0].append(densities[0][i]/densities[1][i]) ##
+                
+                #interdomain_densities[1].append(densities[2][i]/densities[3][i]) ## 
+                
+                
+                
+                
             print(interdomain_densities)
-            ## add the shifted data together to create source and target
             
+            #### TODO: make IW-weight vector for samples
+            def label_to_iw(labels,interdomain_densities):
+                
+                
+                ## change from one hot to numbers
+                labels_new=[]
+                for i in labels:
+                    labels_new.append(np.where(i==1)[0][0])
+                labels=labels_new
+                importance_weights=[]
+                
+                
+                ### for each label add the corresponding weights to a vector
+                for i in labels:
+                    importance_weights.append(interdomain_densities[i])
+                return importance_weights
+
+            # T(y)/S(Y)
+            
+            iw1= label_to_iw(y_shift,interdomain_densities[0])
+            
+            iw2= label_to_iw(y_shift_m,interdomain_densities[1]) ### inverse here as it is MNIST-M samples, correct?
+            
+            iw3= label_to_iw(y_shift_target,interdomain_densities[0])
+            
+            iw4= label_to_iw(y_shift_target_m,interdomain_densities[1]) ### inverse here as it is MNIST-M samples, correct?
+            
+            
+            iw_source=np.append(iw1,iw2, axis=0)
+            print(iw_source)
+            print("Mean of weights on source, should be 1: ",np.mean(iw_source))
+            iw_target=np.append(iw3,iw4, axis=0)
+            
+            #################################################################
+            ## add the shifted data together to create source and target
+            #################################################################
             x_source=np.append(x_shift,x_shift_m, axis=0)
             y_source=np.append(y_shift,y_shift_m, axis=0)
             x_target=np.append(x_shift_target,x_shift_target_m, axis=0)
@@ -175,76 +227,106 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         from sklearn.model_selection import train_test_split
         #data_path2="/cephyr/NOBACKUP/groups/snic2021-23-538/"
         data_path="/cephyr/users/adambre/Alvis/mnist_transfer/"
-        x_chest=np.load(data_path+"chestxray14_"+str(img_size)+".npy",allow_pickle=True)
-        y_chest=np.load(data_path+"chestxray14_"+str(img_size)+"_labels.npy",allow_pickle=True)
+        x_chest=np.load(data_path+"chestxray14_"+str(image_size)+".npy",allow_pickle=True)
+        y_chest=np.load(data_path+"chestxray14_"+str(image_size)+"_labels.npy",allow_pickle=True)
 
-        x_chex=np.load(data_path+"chexpert_"+str(img_size)+".npy",allow_pickle=True)
-        y_chex=np.load(data_path+"chexpert_"+str(img_size)+"_labels.npy",allow_pickle=True)
+        x_chex=np.load(data_path+"chexpert_"+str(image_size)+".npy",allow_pickle=True)
+        y_chex=np.load(data_path+"chexpert_"+str(image_size)+"_labels.npy",allow_pickle=True)
 
         
 
 
-        ### do standard scaling
+        ### do standard scaling with imagenet mean/std
+#         x_chest = x_chest.astype('float32')
+#         sigma=np.std(x_chest)
+#         x_chest /=sigma
+
+#         x_chex = x_chex.astype('float32')
+#         sigma2=np.std(x_chex)
+#         x_chex /=sigma
+#         ## mean subtraction
+#         mu=np.mean(x_chest)
+#         x_chest -= mu
+
+#         mu2=np.mean(x_chex)
+#         x_chex -= mu
+        
+        
         x_chest = x_chest.astype('float32')
-        sigma=np.std(x_chest)
-        x_chest /=sigma
-
         x_chex = x_chex.astype('float32')
-        sigma2=np.std(x_chex)
-        x_chex /=sigma
-        ## mean subtraction
-        mu=np.mean(x_chest)
-        x_chest -= mu
+        x_chex/=255
+        x_chest/=255
+        
+        imagenet_mean = np.array([0.485, 0.456, 0.406])
+        imagenet_std = np.array([0.229, 0.224, 0.225])
+        
+        x_chex  = (x_chex - imagenet_mean) / imagenet_std
+        x_chest = (x_chest - imagenet_mean) / imagenet_std
 
-        mu2=np.mean(x_chex)
-        x_chex -= mu
-        ## print amount of each labels in the dataset
-        #print(np.sum(y_chex,axis=0))
-        #print(np.sum(y_chest,axis=0))
-        #         print(y_chest[0])
-        #         print(y_chex[53])
-        #         sys.exit(-1)
         
         
-        ## two datasets of different lengths, want to induce domain imbalance between source and target, 
-        ## we do 20% of samples from each label in chestxray14 is added to chexpert to create the source, rest is target, i.e. 
-        ## there is no chexpert in the target AND source is much larger than the target
         x_source=x_chex
         y_source=y_chex
-        
+        print("amount of chexpert examples",len(y_source))
         x_sourceadd=[]
         y_sourceadd=[]
         x_target=[]
         y_target=[]
-        for label in range(5):
-            # remove some percentage of each label, now 20% -> beta_inf=4
-            x_shift, y_shift, x_shift_target, y_shift_target = label_shift(x_chest,y_chest,0.2,label)
-            x_chest=x_shift
-            y_chest=y_shift
-            # append to source
-            x_sourceadd.extend(x_shift_target)
-            y_sourceadd.extend(y_shift_target)
-            
-        # target is the remaining samples from chestxray14
         
+        ## two datasets of different lengths, want to induce domain imbalance between source and target, 
+        ## we do 20% of samples from each label in chestxray14 is added to chexpert to create the source, rest is target, i.e. 
+        ## there is no chexpert in the target AND source is much larger than the target
+        
+        ## NOTE: as we can have multiple labels for a single example here, i.e. labels are not categorical variables, we need to
+        ## binarise the problem first to make it into categorical variables and then calculate the importance weights
+
+    
+        n_chex_source=len(y_chex)
+        
+        x_shift, x_shift_target,y_shift, y_shift_target = train_test_split(x_chest,y_chest,test_size=0.2,random_state=seed)
+        n_chest_source=len(y_shift_target)
+        y_source=list(y_chex)
+        x_source=list(x_chex)
+        y_source.extend(y_shift_target)
+        x_source.extend(x_shift_target)
+        
+        y_target=y_shift
+        x_target=x_shift
+        
+        ### Binarize labels, let no_finding be the goal, 
+        y_source=binarize(y_source,0)
   
-        x_source=list(x_source)
-        y_source=list(y_source)
-        x_source.extend(x_sourceadd)
-        y_source.extend(y_sourceadd)
-        x_source=np.array(x_source)
-        y_source=np.array(y_source)
+        y_target=binarize(y_target,0)
     
 
-        x_target=x_chest
-        y_target=y_chest
 
-        ### Binarize labels
-
-        y_source=binarize(y_source,2)
-  
-        y_target=binarize(y_target,2)
+        n_source=len(y_source)
+        n_target=len(y_target)
+        iw_source=list(np.zeros(n_chex_source)) ### weights for chexpert, 0 as they are not in the target
         
+        ##### make the # ex w label y in target 
+        y_shift_target=binarize(y_shift_target,0)
+        num_labels_src=np.sum(y_shift_target,axis=0)
+        num_labels_tgt=np.sum(y_target,axis=0)
+        print(num_labels_tgt[0]/num_labels_src[0])
+        print(num_labels_tgt[1]/num_labels_src[1])
+        chestweight= list(np.ones(n_chest_source)*n_source/n_target) ### n_target/n_chest_source not constant between labels 
+        for i, y in enumerate(y_shift_target):
+            ### do correct weighting of labels
+            res=[0,1]
+            I=res@y
+            chestweight[i]*=num_labels_tgt[I]/num_labels_src[I]
+        
+        print("length of chestxray in source", n_chest_source)
+        iw_source.extend(chestweight)
+        
+        iw_target=np.ones(n_target)*n_target/n_chest_source*n_source/n_target ### weights for chestxray14, 
+        #### this does not really make sense but we also don't use it, so no matter
+        print("amount of chest in source and target",n_target/n_chest_source)
+        
+        print("mean of weights in source, should be 1: ", np.mean(iw_source))
+        x_source=np.array(x_source)
+        x_target=np.array(x_target)
         print("source",len(y_source))
         print(np.sum(y_source,axis=0))
         print("-"*40)
@@ -258,38 +340,10 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         # chexpert + chestxray14 with dataloader
         ###########################################################################
         from sklearn.model_selection import train_test_split
-        batch_size=64
         #data_path="/home/users/adam/Code/Datasets/"
         data_path="/cephyr/NOBACKUP/groups/snic2021-23-538/"
         chest_image_source_dir=data_path+"chestXray14/"
-        chex_image_source_dir=data_path+"new_chexpert/"
-        
-#         output_dir="/home/adam/Code"
-#         class_names= ["No Finding","Cardiomegaly","Edema","Consolidation","Atelectasis","Effusion"]
-       
-        ### load and print csv files
-        
-        
-        
-        
-        # chexpert csv files
-#         train_file = os.path.join(chex_image_source_dir, 'train.csv')
-#         valid_file = os.path.join(chex_image_source_dir, 'valid.csv')
-#         chest_file = os.path.join(chest_image_source_dir, 'Data_Entry_2017_v2020.csv')
-#         data = pd.read_csv(train_file)
-#         data_v = pd.read_csv(train_file)
-#         data2=pd.read_csv(chest_file)
-#         print(data2)
-#         for label in data2["Finding Labels"]:
-            
-    
-#             if isinstance(label,float):
-#                 print(label)
-#                 print(label.index)
-#         sys.exit(-1)
-        
-#         print(data.head())
-#         print(data2.head())
+        chex_image_source_dir=data_path
         
         #### fix the labels and such to be on desired form
         chest_data, _ =xray.make_xray14_labels(chest_image_source_dir)
@@ -308,33 +362,87 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         x_chex = chex_data#.drop("Finding_Labels", axis=1)
         x_chest = chest_data#.drop("Finding_Labels", axis=1)
         
-        x_shift, x_shift_target,y_shift, y_shift_target = train_test_split(x_chest,y_chest,test_size=0.2)
-#         print("--"*30)
-#         print(x_shift_target)
-#         print(x_chest)
-#         print("--"*30)
-#         sys.exit(-1)
-        # X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=random_state)
+        n_chex_source=len(y_chex)
+        
+        x_shift, x_shift_target,y_shift, y_shift_target = train_test_split(x_chest,y_chest,test_size=0.2,random_state=seed)
+
+        
         y_source=pd.concat([y_shift_target,y_chex])
         x_source=pd.concat([x_shift_target,x_chex])
         y_target=y_shift
         x_target=x_shift
         
+        ### calculate importance weights
         
-        #### return dataloader
-        source_data_loader= CheXpertDataGenerator(dataset_df=x_source, y=y_source,
+        n_chest_source=len(y_shift_target)
+        
+        y_target=y_shift
+        x_target=x_shift
+        
+        ### Binarize labels, let no_finding be the goal, 
+        y_source=binarize(y_source,0)
+        y_target=binarize(y_target,0)
+    
+        n_source=len(y_source)
+        n_target=len(y_target)
+        iw_source=list(np.zeros(n_chex_source)) ### weights for chexpert, 0 as they are not in the target
+        
+        ##### make the # ex w label y in target 
+        y_shift_target=binarize(y_shift_target,0)
+        num_labels_src=np.sum(y_shift_target,axis=0)
+        num_labels_tgt=np.sum(y_target,axis=0)
+        print(num_labels_tgt[0]/num_labels_src[0])
+        print(num_labels_tgt[1]/num_labels_src[1])
+        chestweight= list(np.ones(n_chest_source)*n_source/n_target) ### n_target/n_chest_source not constant between labels 
+        for i, y in enumerate(y_shift_target):
+            ### do correct weighting of labels
+            res=[0,1]
+            I=res@y
+            chestweight[i]*=num_labels_tgt[I]/num_labels_src[I]
+        
+        print("length of chestxray in source", n_chest_source)
+        iw_source.extend(chestweight)
+        
+        iw_target=np.ones(n_target)*n_target/n_chest_source*n_source/n_target ### weights for chestxray14, 
+        #### this does not really make sense but we also don't use it, so no matter
+        print("amount of chest in source and target",n_target/n_chest_source)
+        
+        print("mean of weights in source, should be 1: ", np.mean(iw_source))
+        
+        if alpha!=0:
+            x_bound, x_prior, y_bound , y_prior = train_test_split(x_source,y_source,test_size=alpha,random_state=seed)
+            iw_bound,iw_prior, _,_= train_test_split(iw_source,iw_source ,test_size=alpha,random_state=seed)
+            prior_data_loader= CheXpertDataGenerator(dataset_df=x_prior, y=y_prior,
             batch_size=batch_size,
-            target_size=(img_size, img_size),
+            target_size=(image_size, image_size),
+            iw=iw_prior
                    )
-        
-        target_data_loader= CheXpertDataGenerator(dataset_df=x_target,y=y_target,
+            bound_data_loader= CheXpertDataGenerator(dataset_df=x_bound, y=y_bound,
             batch_size=batch_size,
-            target_size=(img_size, img_size),
-                    )
+            target_size=(image_size, image_size),
+                                                     iw=iw_bound
+                   )
+            target_data_loader= CheXpertDataGenerator(dataset_df=x_target,y=y_target,
+                batch_size=batch_size,
+                target_size=(image_size, image_size),
+                                                      iw=iw_target
+                        )
+        else:
+            source_data_loader= CheXpertDataGenerator(dataset_df=x_source, y=y_source,
+                batch_size=batch_size,
+                target_size=(image_size, image_size),
+                                                      iw=iw_source
+                       )
+
+            target_data_loader= CheXpertDataGenerator(dataset_df=x_target,y=y_target,
+                batch_size=batch_size,
+                target_size=(image_size, image_size),
+                                                      iw=iw_target
+                        )
     else: 
         raise Exception('Task '+str(task)+' does not exist')
      
-    #### binarize if chosen
+    #### binarize if chosen, TODO: do this outside of this function
     if binary:
         if task==6 or task==7:
             pass # we have already done this
@@ -345,13 +453,17 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
     
 
     if task==7:
-        return source_data_loader,target_data_loader
+        if alpha!=0:
+            return prior_data_loader,bound_data_loader,target_data_loader
+        else:
+            return source_data_loader,target_data_loader
     else:
-               #####################################################################################################################
+                                       
+        #####################################################################################################################
         # Shuffle the data with some seed before returning it. 
         # This is done to mitigate data being in too specific an order, i.e. mixes being one dataset after the other etc.
         #####################################################################################################################
-        np.random.seed()
+        
         L=len(y_source)
         source_indices=np.random.permutation(L)
         L2=len(y_target)
@@ -359,4 +471,4 @@ def load_task(task=2,binary=True,img_size=32,architecture='lenet'):
         x_source=x_source[source_indices]
 
         x_target=x_target[target_indices]
-        return x_source, np.array(y_source)[source_indices], x_target, np.array(y_target)[target_indices]
+        return x_source, np.array(y_source)[source_indices], x_target, np.array(y_target)[target_indices], np.array(iw_source)[source_indices], np.array(iw_target)[target_indices]

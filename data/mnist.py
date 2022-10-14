@@ -2,7 +2,7 @@ import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 from tensorflow.keras.datasets import mnist
 import numpy as np
-def load_mnist():
+def load_mnist(task):
     """
     Imports the MNIST dataset from the tf datasets
     """
@@ -32,10 +32,12 @@ def load_mnist():
     x_train=np.expand_dims(x_train,3)
     x_test=np.expand_dims(x_test,3)
 
-
-    ### make mnist into 3 channels
-    x_train=np.concatenate((x_train,)*3, axis=-1)
-    x_test=np.concatenate((x_test,)*3, axis=-1)
+    if task==4:
+        pass
+    else:
+        ### make mnist into 3 channels
+        x_train=np.concatenate((x_train,)*3, axis=-1)
+        x_test=np.concatenate((x_test,)*3, axis=-1)
     print('mean, variance', mu, sigma)
     print("---------------Load MNIST----------------")
     print('Training set', x_train.shape, y_train.shape)
